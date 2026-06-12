@@ -120,24 +120,30 @@ export function ChatScreen() {
 
   return (
     <div className="flex h-full flex-col bg-bg-base">
-      {/* header */}
-      <header className="z-10 flex items-center gap-3 border-b border-border bg-bg-surface px-4 py-2.5">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[color:var(--cyan-tint)] ring-1 ring-[color:var(--border)]">
-          <KhumpiAvatar state={headerState} size={34} idle={false} />
-        </span>
+      {/* header — living assistant presence */}
+      <header
+        className="relative z-10 flex items-center gap-3 border-b border-border px-4 py-3"
+        style={{ background: 'linear-gradient(180deg, var(--cyan-tint), var(--bg-surface) 70%)' }}
+      >
+        <div className="relative shrink-0">
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-bg-surface shadow-soft ring-1 ring-[color:var(--border)]">
+            <KhumpiAvatar state={headerState} size={50} />
+          </span>
+          {/* online presence dot */}
+          <span
+            className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-[color:var(--bg-surface)]"
+            style={{ background: isOffline ? 'var(--amber)' : thinking || listening ? 'var(--amber)' : 'var(--cyan)' }}
+          />
+        </div>
         <div className="flex-1">
-          <p className="font-serif text-[17px] font-bold leading-tight text-text-primary">{es.app.name}</p>
+          <p className="font-serif text-[18px] font-bold leading-tight text-text-primary">{es.app.name}</p>
           <p
-            className="flex w-fit cursor-default select-none items-center gap-1.5 text-xs text-text-secondary"
+            className="flex w-fit cursor-default select-none items-center gap-1.5 text-[13px] font-semibold text-text-secondary"
             onPointerDown={startPress}
             onPointerUp={endPress}
             onPointerLeave={endPress}
             title="Khumpai"
           >
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: isOffline ? 'var(--amber)' : thinking || listening ? 'var(--amber)' : 'var(--cyan)' }}
-            />
             {isOffline ? es.offline.banner.replace('📥 ', '') : statusText}
           </p>
         </div>
