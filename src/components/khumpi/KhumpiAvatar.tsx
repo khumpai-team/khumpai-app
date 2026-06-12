@@ -32,13 +32,33 @@ interface Props {
   size?: number;
   /** Disable the living idle loop (e.g. tiny header/nav/bubble avatars). */
   idle?: boolean;
+  /** Crop to a head-and-shoulders portrait (for chat bubble avatars). */
+  head?: boolean;
   className?: string;
   title?: string;
 }
 
-export function KhumpiAvatar({ state = 'happy', size = 96, idle = true, className, title = 'Khumpi' }: Props) {
+export function KhumpiAvatar({ state = 'happy', size = 96, idle = true, head = false, className, title = 'Khumpi' }: Props) {
   const reduce = useReducedMotion();
-  const live = idle && !reduce;
+  const live = idle && !reduce && !head;
+
+  // Head-and-shoulders crop: zoom in and clip to a circle. Static so the head
+  // stays framed inside the clip.
+  if (head) {
+    return (
+      <div
+        className={className}
+        style={{ position: 'relative', width: size, height: size, overflow: 'hidden', borderRadius: '9999px' }}
+      >
+        <img
+          src={SRC[state]}
+          alt={title}
+          draggable={false}
+          style={{ position: 'absolute', width: size * 2.4, height: 'auto', left: '50%', top: size * -0.08, transform: 'translateX(-50%)' }}
+        />
+      </div>
+    );
+  }
 
   // Pacing & amplitude vary by mood — happy is bouncier, calm is slow.
   const dur = state === 'happy' ? 2.7 : state === 'calm' ? 4 : 3.3;

@@ -32,8 +32,8 @@ export function MessageBubble({
   if (isKhumpi) {
     return (
       <motion.div {...reveal} className="flex items-end gap-2.5">
-        <span className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--cyan-tint)] ring-1 ring-[color:var(--border)]">
-          <KhumpiAvatar state="happy" size={28} idle={false} />
+        <span className="mb-0.5 grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[color:var(--cyan-tint)] ring-1 ring-[color:var(--border)]">
+          <KhumpiAvatar state="happy" size={48} head />
         </span>
         <div className="max-w-[80%] rounded-[20px] rounded-bl-[7px] border border-border bg-[color:var(--bubble-khumpi)] px-4 py-2.5 text-[16px] leading-relaxed text-text-primary shadow-soft">
           {text}

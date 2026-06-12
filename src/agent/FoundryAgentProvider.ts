@@ -105,7 +105,7 @@ export class FoundryAgentProvider implements AgentProvider {
 
     let response: Response;
     try {
-      response = await fetch('/api/foundry/chat', {
+      response = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages }),
