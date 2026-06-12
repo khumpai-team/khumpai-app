@@ -182,6 +182,26 @@ export const es = {
     languageSoon: 'Más idiomas pronto',
   },
 
+  checkin: {
+    greeting: 'Buenos días ☀️ ¿Cómo amaneciste? Cuéntame en un toque.',
+    sleepTitle: '¿Cuánto dormiste anoche?',
+    sleepBands: ['Menos de 5h', '5 a 6h', '7 a 8h', 'Más de 8h'],
+    moodTitle: '¿Cómo te sientes hoy?',
+    moodLabels: ['Muy mal', 'Mal', 'Normal', 'Bien', 'Muy bien'],
+    stressTitle: '¿Qué tan preocupado estás?',
+    stressLabels: ['Tranquilo', 'Algo', 'Bastante'],
+    thanks: 'Gracias por contarme cómo amaneciste 💚',
+    skip: 'Saltar por hoy',
+  },
+
+  offline: {
+    banner: '📥 Sin señal — guardo todo aquí y sincronizo cuando vuelva',
+    reconnecting: (n: number) =>
+      `✓ De vuelta — sincronizando ${n} ${n === 1 ? 'registro' : 'registros'}…`,
+    reconnected: '✓ De vuelta — todo sincronizado',
+    reconnectMsg: 'Ya vi lo que me contaste sin señal 💚 Lo dejé todo guardado.',
+  },
+
   welcome: {
     tagline: 'Tu compañero, con o sin señal',
     cta: 'Conocer a Khumpi',

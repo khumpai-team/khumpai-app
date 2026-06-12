@@ -9,14 +9,37 @@
 import { useCallback } from 'react';
 import { agent } from '@/agent';
 import type { AgentEvent, AgentInput } from '@/agent/AgentProvider';
-import { parseMessage } from '@/agent/parse';
-import { detectPattern, evaluateRedFlag, guardrailRedirect } from '@/agent/tools';
+import { parseMessage, type ParsedIntent } from '@/agent/parse';
+import {
+  anticipateRiskFromContext,
+  buildDraftEntries,
+  detectPattern,
+  evaluateRedFlag,
+  guardrailRedirect,
+} from '@/agent/tools';
 import { recordSuggestion } from '@/lib/prefs';
 import { uid } from '@/lib/id';
 import { es } from '@/data/i18n/es';
-import type { GlucoseMoment, LogEntry, RedFlagLevel } from '@/types';
+import { AGENT_ES } from '@/data/i18n/agent-es';
+import type { GlucoseMoment, LogEntry, MoodScore, RedFlagLevel, StressLevel } from '@/types';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
+
+const DATA_KINDS = ['meal', 'glucose', 'sleep', 'medication', 'symptom'] as const;
+const isDataIntent = (
+  i: ParsedIntent,
+): i is Extract<ParsedIntent, { kind: (typeof DATA_KINDS)[number] }> =>
+  (DATA_KINDS as readonly string[]).includes(i.kind);
+
+/** Offline acknowledgement, derived from the parsed intent (no network). */
+function offlineReplyFor(intent: ParsedIntent): string {
+  if (intent.kind === 'glucose') {
+    if (intent.value >= 250) return AGENT_ES.offline.glucoseVeryHigh(intent.value);
+    if (intent.value < 70) return AGENT_ES.offline.glucoseLow(intent.value);
+  }
+  if (intent.kind === 'sleep' && intent.hours < 5) return AGENT_ES.offline.sleepShort(intent.hours);
+  return AGENT_ES.offline.noConnection;
+}
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -220,6 +243,38 @@ export function useChat() {
     [],
   );
 
+  // --- Morning check-in + anticipation -----------------------------------
+
+  const runAnticipation = useCallback(async () => {
+    const res = anticipateRiskFromContext(useAppStore.getState());
+    if (res) {
+      await sleep(700);
+      await streamSay(res.message);
+    }
+  }, [streamSay]);
+
+  const saveCheckin = useCallback(
+    async (sleepHours: number, mood: MoodScore, stress: StressLevel) => {
+      const app = useAppStore.getState();
+      const at = new Date().toISOString();
+      const base = {
+        personId: app.currentPersonId,
+        timestamp: at,
+        createdAt: at,
+        source: 'quick_action' as const,
+        confirmed: true,
+        isOfflineCapture: false,
+      };
+      app.actions.addLog({ id: uid('log'), ...base, type: 'sleep', payload: { hours: sleepHours } });
+      app.actions.addLog({ id: uid('log'), ...base, type: 'mood', payload: { score: mood } });
+      app.actions.addLog({ id: uid('log'), ...base, type: 'stress', payload: { level: stress } });
+      await sleep(300);
+      await streamSay(es.checkin.thanks);
+      await runAnticipation();
+    },
+    [streamSay, runAnticipation],
+  );
+
   // --- Main entry --------------------------------------------------------
 
   const sendUserMessage = useCallback(
@@ -228,11 +283,25 @@ export function useChat() {
       if (!trimmed) return;
       const chat = useChatStore.getState();
       const app = useAppStore.getState();
+      const offline = app.isOffline;
 
       chat.setCalm(false);
-      chat.addMessage({ id: uid('msg'), kind: 'message', role: 'user', text: trimmed });
+      chat.addMessage({ id: uid('msg'), kind: 'message', role: 'user', text: trimmed, pending: offline });
 
       const intent = parseMessage(trimmed);
+
+      // Offline: queue the entry for later sync and reply from local rules.
+      if (offline) {
+        if (isDataIntent(intent)) {
+          const draft = buildDraftEntries(intent, app.currentPersonId);
+          app.actions.enqueueOffline(draft.primary);
+          if (draft.secondary) app.actions.enqueueOffline(draft.secondary);
+        }
+        chat.setThinking(true);
+        await sleep(550);
+        await streamSay(offlineReplyFor(intent));
+        return;
+      }
 
       // Spike arc: a high reading opens the calm → why → action flow.
       if (intent.kind === 'glucose' && intent.value > 180) {
@@ -298,5 +367,6 @@ export function useChat() {
     dismissCard,
     answerArcChoice,
     resolveAction,
+    saveCheckin,
   };
 }

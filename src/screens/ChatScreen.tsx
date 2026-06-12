@@ -1,8 +1,9 @@
 /**
- * ChatScreen — the home of the conversation and the app's default route.
- * Header (Khumpi + status) · scrolling transcript with inline cards (confirm,
- * insight, action, safety) and arc choice chips · composer. During the calm arc
- * the background gains a barely-there sky wash and Khumpi softens to "calm".
+ * ChatScreen — the conversation and the app's default route.
+ * Header (Khumpi + status) · offline banner · scrolling transcript with inline
+ * cards (confirm, insight, action, safety) and arc choice chips · composer.
+ * Opens the morning check-in once a day, and a discreet long-press on the
+ * status text toggles the offline demo.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,8 +12,10 @@ import { es } from '@/data/i18n/es';
 import { AGENT_ES } from '@/data/i18n/agent-es';
 import { uid } from '@/lib/id';
 import { useChat } from '@/app/useChat';
+import { useOffline } from '@/app/useOffline';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
+import { useSessionStore } from '@/store/useSessionStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { KhumpiAvatar, type KhumpiState } from '@/components/khumpi/KhumpiAvatar';
 import { MessageBubble } from '@/components/chat/MessageBubble';
@@ -23,7 +26,11 @@ import { ConfirmationCard } from '@/components/cards/ConfirmationCard';
 import { InsightCard } from '@/components/cards/InsightCard';
 import { ActionCard } from '@/components/cards/ActionCard';
 import { SafetyCard } from '@/components/cards/SafetyCard';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
+import { CheckinSheet } from '@/components/sheets/CheckinSheet';
 import { SunIcon, MoonToggleIcon } from '@/components/ui/icons';
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export function ChatScreen() {
   const {
@@ -35,27 +42,39 @@ export function ChatScreen() {
     dismissCard,
     answerArcChoice,
     resolveAction,
+    saveCheckin,
   } = useChat();
   const [listening, setListening] = useState(false);
+  const [showCheckin, setShowCheckin] = useState(false);
+  const [reconnectCount, setReconnectCount] = useState<number | null>(null);
 
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const { isOffline, goOffline, goOnline } = useOffline();
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pressTimer = useRef<number | null>(null);
 
-  // Seed a time-aware greeting once, if the transcript is empty.
+  // Seed greeting + open the morning check-in once per day.
   useEffect(() => {
     const chat = useChatStore.getState();
+    const sess = useSessionStore.getState();
+    const needsCheckin = sess.lastCheckinDate !== todayKey();
     if (chat.items.length === 0) {
       const name = useAppStore.getState().user.name;
       const h = new Date().getHours();
-      const text =
-        h < 12 ? AGENT_ES.greetings.morning(name) : h < 19 ? AGENT_ES.greetings.midday(name) : AGENT_ES.greetings.evening(name);
+      const text = needsCheckin
+        ? es.checkin.greeting
+        : h < 12
+          ? AGENT_ES.greetings.morning(name)
+          : h < 19
+            ? AGENT_ES.greetings.midday(name)
+            : AGENT_ES.greetings.evening(name);
       chat.addMessage({ id: uid('msg'), kind: 'message', role: 'khumpi', text });
     }
+    if (needsCheckin) setShowCheckin(true);
   }, []);
 
-  // Keep pinned to the latest message.
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
@@ -66,14 +85,34 @@ export function ChatScreen() {
     [items],
   );
 
-  const headerState: KhumpiState = calm
-    ? 'calm'
-    : listening
-      ? 'listening'
-      : thinking
-        ? 'thinking'
-        : 'happy';
+  const headerState: KhumpiState = calm ? 'calm' : listening ? 'listening' : thinking ? 'thinking' : 'happy';
   const statusText = listening ? es.chat.statusListening : thinking ? es.chat.statusThinking : es.chat.status;
+
+  // Discreet long-press on the status line toggles the offline demo.
+  const startPress = () => {
+    pressTimer.current = window.setTimeout(() => {
+      if (useAppStore.getState().isOffline) {
+        const n = goOnline();
+        setReconnectCount(n);
+        window.setTimeout(() => setReconnectCount(null), 2600);
+      } else {
+        goOffline();
+      }
+    }, 600);
+  };
+  const endPress = () => {
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+  };
+
+  const completeCheckin = (sleepHours: number, mood: 1 | 2 | 3 | 4 | 5, stress: 1 | 2 | 3) => {
+    setShowCheckin(false);
+    useSessionStore.getState().setLastCheckinDate(todayKey());
+    saveCheckin(sleepHours, mood, stress);
+  };
+  const skipCheckin = () => {
+    setShowCheckin(false);
+    useSessionStore.getState().setLastCheckinDate(todayKey());
+  };
 
   return (
     <div className="flex h-full flex-col bg-bg-base">
@@ -84,12 +123,18 @@ export function ChatScreen() {
         </span>
         <div className="flex-1">
           <p className="font-serif text-[17px] font-bold leading-tight text-text-primary">{es.app.name}</p>
-          <p className="flex items-center gap-1.5 text-xs text-text-secondary">
+          <p
+            className="flex w-fit cursor-default select-none items-center gap-1.5 text-xs text-text-secondary"
+            onPointerDown={startPress}
+            onPointerUp={endPress}
+            onPointerLeave={endPress}
+            title="Khumpai"
+          >
             <span
               className="inline-block h-2 w-2 rounded-full"
-              style={{ background: thinking || listening ? 'var(--amber)' : 'var(--cyan)' }}
+              style={{ background: isOffline ? 'var(--amber)' : thinking || listening ? 'var(--amber)' : 'var(--cyan)' }}
             />
-            {statusText}
+            {isOffline ? es.offline.banner.replace('📥 ', '') : statusText}
           </p>
         </div>
         <button
@@ -102,9 +147,10 @@ export function ChatScreen() {
         </button>
       </header>
 
+      <OfflineBanner offline={isOffline} reconnectCount={reconnectCount} />
+
       {/* transcript */}
       <div ref={scrollRef} className="no-scrollbar relative flex-1 overflow-y-auto px-4 py-4">
-        {/* calm atmosphere wash */}
         <AnimatePresence>
           {calm && (
             <motion.div
@@ -173,7 +219,7 @@ export function ChatScreen() {
 
           {thinking && <TypingIndicator />}
 
-          {!hasUserSpoken && !thinking && (
+          {!hasUserSpoken && !thinking && !showCheckin && (
             <div className="pt-2">
               <SuggestionChips onPick={sendUserMessage} />
             </div>
@@ -183,6 +229,11 @@ export function ChatScreen() {
 
       {/* composer */}
       <ChatInput onSend={sendUserMessage} onListeningChange={setListening} />
+
+      {/* morning check-in */}
+      <AnimatePresence>
+        {showCheckin && <CheckinSheet onComplete={completeCheckin} onSkip={skipCheckin} />}
+      </AnimatePresence>
     </div>
   );
 }
