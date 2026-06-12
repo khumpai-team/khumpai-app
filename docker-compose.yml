@@ -5,8 +5,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: khumpai
+      # LOCAL DEV ONLY: trust auth sidesteps a Docker-Desktop-on-Windows
+      # scram-sha-256 host-auth quirk; dev DB only — firewall this machine.
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5432:5432"
+      # Host 5432 is occupied by another local Postgres, so publish on 5433.
+      - "5433:5432"
     volumes:
       - khumpai_pgdata:/var/lib/postgresql/data
 volumes:
