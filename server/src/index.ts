@@ -2,6 +2,7 @@ import express from 'express';
 import { env } from './env.js';
 import { stateRoute } from './http/state.route.js';
 import { logsRoute } from './http/logs.route.js';
+import { entitiesRoute } from './http/entities.route.js';
 
 export function createApp() {
   const app = express();
@@ -16,6 +17,7 @@ export function createApp() {
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use(stateRoute);
   app.use(logsRoute);
+  app.use(entitiesRoute);
   return app;
 }
 
