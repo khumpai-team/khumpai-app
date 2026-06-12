@@ -62,7 +62,9 @@ export function ChatScreen() {
     const sess = useSessionStore.getState();
     const isCaregiver = useAppStore.getState().mode === 'caregiver';
     const needsCheckin = !isCaregiver && sess.lastCheckinDate !== todayKey();
-    if (chat.items.length === 0) {
+    // Idempotent across StrictMode double-mounts and re-renders.
+    if (chat.items.length === 0 && !chat.seeded) {
+      chat.markSeeded();
       const name = useAppStore.getState().user.name;
       const h = new Date().getHours();
       const text = needsCheckin

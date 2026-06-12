@@ -67,10 +67,10 @@ function localAck(draft: DraftEntries): string {
 
 /** Resolve which patient a caregiver entry is for (by name, relation, or default). */
 function resolveTargetPerson(intent: DataIntent, text: string, persons: Person[]): Person | undefined {
-  const n = norm(text);
+  const words = new Set(norm(text).split(/[^a-zñ0-9]+/).filter(Boolean));
   for (const p of persons) {
     const first = norm(p.name).split(/\s+/)[0];
-    if (first.length >= 3 && n.includes(first)) return p;
+    if (first.length >= 3 && words.has(first)) return p; // whole-word match only
   }
   if (intent.subject === 'father') {
     const p = persons.find((x) => x.relation === 'father');

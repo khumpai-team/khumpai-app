@@ -85,8 +85,11 @@ interface ChatState {
   thinking: boolean;
   /** Calm atmosphere wash (the spike→calm arc). */
   calm: boolean;
+  /** Set once the opening greeting has been seeded (idempotent across mounts). */
+  seeded: boolean;
 
   addMessage: (item: MessageItem) => void;
+  markSeeded: () => void;
   appendDelta: (id: string, delta: string) => void;
   endMessage: (id: string) => void;
   addCard: (item: CardItem) => void;
@@ -108,8 +111,10 @@ export const useChatStore = create<ChatState>()(
       items: [],
       thinking: false,
       calm: false,
+      seeded: false,
 
       addMessage: (item) => set((s) => ({ items: [...s.items, item] })),
+      markSeeded: () => set({ seeded: true }),
       appendDelta: (id, delta) =>
         set((s) => ({
           items: s.items.map((it) =>
@@ -160,11 +165,14 @@ export const useChatStore = create<ChatState>()(
         })),
       setThinking: (v) => set({ thinking: v }),
       setCalm: (v) => set({ calm: v }),
-      clear: () => set({ items: [], thinking: false, calm: false }),
+      clear: () => set({ items: [], thinking: false, calm: false, seeded: false }),
     }),
     {
       name: 'khumpai-chat',
       storage: createJSONStorage(() => sessionStorage),
+      // Only the transcript is durable. thinking/calm/seeded are transient UI
+      // state — persisting them could restore a stuck "typing…" on reload.
+      partialize: (s) => ({ items: s.items }),
     },
   ),
 );
