@@ -254,13 +254,16 @@ export const es = {
   },
 
   login: {
+    demo: 'Modo demo',
     title: 'Ingresa tu número',
-    subtitle: 'Te enviamos un código para entrar. Es solo para la demo.',
+    subtitle: 'Te enviamos un código para entrar. No enviamos SMS reales.',
     phoneLabel: 'Número de celular',
     phonePlaceholder: '9XX XXX XXX',
     sendCode: 'Enviar código',
-    otpLabel: 'Código de 4 dígitos',
-    otpHint: 'Para la demo, escribe cualquier número de 4 dígitos.',
+    otpLabel: 'Ingresa el código',
+    otpSentTo: (phone: string) => `Enviado al ${phone}`,
+    otpHint: 'Ya pusimos el código de demo por ti — solo entra.',
+    resend: 'Reenviar código',
     verify: 'Entrar',
   },
 
