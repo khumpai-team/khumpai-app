@@ -105,6 +105,22 @@ export const ChatBubbleIcon = (p: IconProps) => (
   </svg>
 );
 
+export const ReportIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="5" y="3" width="14" height="18" rx="2.5" />
+    <path d="M9 8h6M9 12h6" />
+    <path d="M9 16h3" />
+  </svg>
+);
+
+export const SlidersIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+    <circle cx="16" cy="7" r="2.2" />
+    <circle cx="8" cy="17" r="2.2" />
+  </svg>
+);
+
 export const AlertIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 4.5 21 19.5H3L12 4.5Z" />

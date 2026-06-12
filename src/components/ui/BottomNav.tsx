@@ -1,12 +1,13 @@
 /**
- * Bottom navigation: Home · (elevated Khumpi → Chat) · Mi diario.
- * The center button is raised and carries Khumpi's face — it's the primary way
- * into the conversation.
+ * Bottom navigation: Inicio · Diario · (elevated Khumpi → Chat) · Reporte · Lab.
+ * Two tabs flank each side of the raised center button (Khumpi's face), which
+ * is the primary way into the conversation.
  */
 
 import { NavLink } from 'react-router-dom';
 import { es } from '@/data/i18n/es';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
+import { ReportIcon, SlidersIcon } from '@/components/ui/icons';
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
@@ -76,12 +77,17 @@ export function BottomNav() {
       aria-label="Navegación principal"
       className="relative z-20 flex items-stretch border-t border-border bg-bg-surface px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(31,102,153,0.06)]"
     >
-      <SideTab to="/home" label={es.nav.home}>
-        {(active) => <HomeIcon active={active} />}
-      </SideTab>
+      <div className="flex flex-1">
+        <SideTab to="/home" label={es.nav.home}>
+          {(active) => <HomeIcon active={active} />}
+        </SideTab>
+        <SideTab to="/journal" label={es.nav.journal}>
+          {(active) => <JournalIcon active={active} />}
+        </SideTab>
+      </div>
 
       {/* elevated center button → Chat */}
-      <div className="flex w-[88px] shrink-0 justify-center">
+      <div className="flex w-[76px] shrink-0 justify-center">
         <NavLink
           to="/chat"
           aria-label={es.nav.chat}
@@ -94,9 +100,14 @@ export function BottomNav() {
         </NavLink>
       </div>
 
-      <SideTab to="/journal" label={es.nav.journal}>
-        {(active) => <JournalIcon active={active} />}
-      </SideTab>
+      <div className="flex flex-1">
+        <SideTab to="/report" label={es.nav.report}>
+          {(active) => <ReportIcon size={25} fillOpacity={active ? 0.14 : 0} fill={active ? 'currentColor' : 'none'} />}
+        </SideTab>
+        <SideTab to="/playground" label={es.nav.playground}>
+          {() => <SlidersIcon size={25} />}
+        </SideTab>
+      </div>
     </nav>
   );
 }

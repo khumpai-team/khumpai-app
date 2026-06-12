@@ -15,7 +15,9 @@ export const es = {
   nav: {
     home: 'Inicio',
     chat: 'Khumpi',
-    journal: 'Mi diario',
+    journal: 'Diario',
+    report: 'Reporte',
+    playground: 'Lab',
   },
 
   chat: {
