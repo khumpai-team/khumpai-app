@@ -164,6 +164,13 @@ export const es = {
     cta: 'Hablar con Khumpi',
     insightsTitle: 'Lo que voy notando',
     achievementsTitle: 'Tus logros',
+    metrics: {
+      title: 'Tu azúcar',
+      subtitle: 'Últimos 7 días',
+      inRange: 'en rango',
+      latest: 'Última',
+      avg: 'Promedio',
+    },
   },
 
   caregiver: {
@@ -392,6 +399,17 @@ export const es = {
       meals: 'Comidas',
       medication: 'Medicación',
       notes: 'Notas de Khumpi',
+    },
+    // Singular category labels for the day timeline.
+    cat: {
+      glucose: 'Glucosa',
+      meal: 'Comida',
+      medication: 'Pastilla',
+      sleep: 'Descanso',
+      mood: 'Ánimo',
+      stress: 'Estrés',
+      symptom: 'Molestia',
+      note: 'Nota',
     },
     sleepLabel: (h: number) => `Dormiste ${h} h`,
     moodLabel: 'Ánimo',

@@ -16,7 +16,8 @@ import { CaregiverDashboard } from '@/screens/CaregiverDashboard';
 import { GearIcon, ChatBubbleIcon } from '@/components/ui/icons';
 import { runPatternDetection } from '@/agent/tools';
 import { InsightCard } from '@/components/cards/InsightCard';
-import type { SleepLog } from '@/types';
+import { Ring } from '@/components/report/viz';
+import type { GlucoseLog, SleepLog } from '@/types';
 
 /** Inicio routes to the patient home or the caregiver dashboard by front. */
 export function HomeScreen() {
@@ -79,6 +80,19 @@ function PatientHome() {
     [logs, currentPersonId],
   );
 
+  // At-a-glance glucose for the last 7 days (null when there are no readings).
+  const glu = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const gs = logs
+      .filter((l): l is GlucoseLog => l.type === 'glucose' && new Date(l.timestamp).getTime() >= cutoff)
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    if (!gs.length) return null;
+    const vals = gs.map((g) => g.payload.value);
+    const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    const pctIn = Math.round((vals.filter((v) => v >= 70 && v <= 180).length / vals.length) * 100);
+    return { avg, pctIn, latest: gs[gs.length - 1].payload.value };
+  }, [logs]);
+
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-bg-base no-scrollbar">
       {/* greeting */}
@@ -108,6 +122,33 @@ function PatientHome() {
       </header>
 
       <div className="flex flex-col gap-4 px-5 pb-6 pt-3">
+        {/* at-a-glance glucose metrics */}
+        {glu && (
+          <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">{es.home.metrics.title}</p>
+              <span className="text-xs font-semibold text-text-tertiary">{es.home.metrics.subtitle}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-4">
+              <Ring pct={glu.pctIn} color={glu.pctIn >= 70 ? 'var(--cyan)' : 'var(--amber)'} size={88} sublabel={es.home.metrics.inRange} />
+              <div className="flex flex-1 flex-col gap-2">
+                <div className="flex items-baseline justify-between border-b border-border pb-2">
+                  <span className="text-sm font-semibold text-text-secondary">{es.home.metrics.latest}</span>
+                  <span className="text-lg font-extrabold text-text-primary">
+                    {glu.latest} <span className="text-xs font-bold text-text-tertiary">mg/dL</span>
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-semibold text-text-secondary">{es.home.metrics.avg}</span>
+                  <span className="text-lg font-extrabold text-text-primary">
+                    {glu.avg} <span className="text-xs font-bold text-text-tertiary">mg/dL</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* pastillero */}
         <Pillbox />
 

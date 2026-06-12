@@ -1,8 +1,9 @@
 /**
- * JournalScreen — the bitácora. A day navigator (with relative labels and a
- * collapsible mini-calendar), then the day's entries grouped into calm cards.
- * Entries edit inline (no modal). Empty days are warm, never guilt-inducing,
- * and missed medication days are simply not shown.
+ * JournalScreen — the bitácora. A day navigator (relative labels + collapsible
+ * mini-calendar) over a single chronological TIMELINE of the day: every entry
+ * as a time-stamped node with a category chip (Glucosa, Comida, Pastilla,
+ * Descanso, …). Glucose/meal nodes edit inline. Warm empty days; missed
+ * medication is simply absent, never shamed.
  */
 
 import { useMemo, useState } from 'react';
@@ -11,25 +12,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
 import { dateKey, isSameDay, relativeDayLabel } from '@/lib/dateUtils';
 import { useAppStore } from '@/store/appStore';
-import type {
-  GlucoseLog,
-  GlucoseMoment,
-  LogEntry,
-  MealContext,
-  MealLog,
-  MoodLog,
-  SleepLog,
-  StressLog,
-} from '@/types';
-import {
-  CalendarIcon,
-  CheckIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  EditIcon,
-  MoonIcon,
-  ShareIcon,
-} from '@/components/ui/icons';
+import type { GlucoseLog, GlucoseMoment, LogEntry, MealContext, MealLog } from '@/types';
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon, ShareIcon } from '@/components/ui/icons';
 
 const MOOD_EMOJI = ['😢', '😟', '😐', '🙂', '😄'];
 const STRESS_EMOJI = ['😌', '😐', '😣'];
@@ -52,22 +36,23 @@ const startOfWeek = (d: Date) => {
   x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); // Monday
   return x;
 };
+const tint = (color: string) => `color-mix(in srgb, ${color} 15%, var(--bg-surface))`;
 
 const inputCls =
   'rounded-md border border-border bg-bg-base px-3 py-2 text-[16px] text-text-primary focus-visible:outline-cyan';
 
-function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
-      <div className="mb-2 flex items-center gap-2 text-deep-blue">
-        <span className="text-base" aria-hidden>
-          {icon}
-        </span>
-        <h2 className="text-sm font-bold uppercase tracking-wide">{title}</h2>
-      </div>
-      <div className="flex flex-col gap-2">{children}</div>
-    </section>
-  );
+interface TimelineEvent {
+  id: string;
+  t: number;
+  timeLabel: string;
+  cat: string;
+  emoji: string;
+  color: string;
+  main: React.ReactNode;
+  sub?: string;
+  edit?: 'glucose' | 'meal';
+  glucose?: GlucoseLog;
+  meal?: MealLog;
 }
 
 export function JournalScreen() {
@@ -75,6 +60,7 @@ export function JournalScreen() {
   const logs = useAppStore((s) => s.logs);
   const medications = useAppStore((s) => s.medications);
   const doctorNotes = useAppStore((s) => s.doctorNotes);
+  const personId = useAppStore((s) => s.currentPersonId);
   const editLog = useAppStore((s) => s.actions.editLog);
 
   const [selected, setSelected] = useState(() => new Date());
@@ -84,30 +70,109 @@ export function JournalScreen() {
   const today = new Date();
   const iso = selected.toISOString();
   const isToday = isSameDay(iso, today.toISOString());
-
-  const dayLogsFor = (d: Date) => logs.filter((l) => isSameDay(l.timestamp, d.toISOString()));
-
-  const dayLogs = useMemo(() => dayLogsFor(selected), [logs, selected]);
-  const byTime = (a: LogEntry, b: LogEntry) => a.timestamp.localeCompare(b.timestamp);
-
-  const sleeps = dayLogs.filter((l): l is SleepLog => l.type === 'sleep');
-  const moods = dayLogs.filter((l): l is MoodLog => l.type === 'mood');
-  const stresses = dayLogs.filter((l): l is StressLog => l.type === 'stress');
-  const glucoses = dayLogs.filter((l): l is GlucoseLog => l.type === 'glucose').sort(byTime);
-  const meals = dayLogs.filter((l): l is MealLog => l.type === 'meal').sort(byTime);
-
   const dayKey = dateKey(iso);
-  const adherence = useMemo(
-    () =>
-      medications
-        .flatMap((m) => m.adherenceLog.filter((r) => r.date === dayKey).map((r) => ({ med: m.name, ...r })))
-        .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime)),
-    [medications, dayKey],
-  );
-  const dayNotes = doctorNotes.filter((n) => isSameDay(n.timestamp, iso)).sort((a, b) => byTime(a as never, b as never));
 
-  const hasMorning = sleeps.length || moods.length || stresses.length;
-  const isEmpty = !hasMorning && !glucoses.length && !meals.length && !adherence.length && !dayNotes.length;
+  const dayLogsFor = (d: Date) =>
+    logs.filter((l) => l.personId === personId && isSameDay(l.timestamp, d.toISOString()));
+
+  // Build a single chronological timeline from every source for the day.
+  const events = useMemo(() => {
+    const T = (ts: string) => new Date(ts).getTime();
+    const evs: TimelineEvent[] = [];
+
+    dayLogsFor(selected).forEach((l) => {
+      const base = { id: l.id, t: T(l.timestamp), timeLabel: fmtTime(l.timestamp) };
+      switch (l.type) {
+        case 'glucose': {
+          const high = l.payload.value >= 180;
+          evs.push({
+            ...base,
+            cat: es.journal.cat.glucose,
+            emoji: '🩸',
+            color: high ? 'var(--amber)' : 'var(--cyan)',
+            main: (
+              <span className="font-bold" style={{ color: high ? 'var(--amber)' : 'var(--text-primary)' }}>
+                {l.payload.value} {es.confirmation.units.mgdl}
+              </span>
+            ),
+            sub: es.enums.glucoseMoment[l.payload.moment],
+            edit: 'glucose',
+            glucose: l,
+          });
+          break;
+        }
+        case 'meal':
+          evs.push({
+            ...base,
+            cat: es.journal.cat.meal,
+            emoji: '🍽️',
+            color: 'var(--cyan)',
+            main: <span className="font-semibold text-text-primary">{l.payload.description}</span>,
+            sub: es.enums.mealContext[l.payload.context],
+            edit: 'meal',
+            meal: l,
+          });
+          break;
+        case 'sleep':
+          evs.push({ ...base, cat: es.journal.cat.sleep, emoji: '😴', color: 'var(--deep-blue)', main: es.journal.sleepLabel(l.payload.hours) });
+          break;
+        case 'mood':
+          evs.push({ ...base, cat: es.journal.cat.mood, emoji: MOOD_EMOJI[l.payload.score - 1], color: 'var(--sky)', main: es.journal.moodLabel });
+          break;
+        case 'stress':
+          evs.push({ ...base, cat: es.journal.cat.stress, emoji: STRESS_EMOJI[l.payload.level - 1], color: 'var(--sky)', main: es.journal.stressLabel });
+          break;
+        case 'symptom':
+          evs.push({ ...base, cat: es.journal.cat.symptom, emoji: '🩹', color: 'var(--amber)', main: <span className="text-text-primary">{l.payload.description}</span> });
+          break;
+      }
+    });
+
+    // Medication adherence (synthesize a time from the scheduled slot).
+    medications
+      .filter((m) => m.personId === personId)
+      .forEach((m) =>
+        m.adherenceLog
+          .filter((r) => r.date === dayKey)
+          .forEach((r) => {
+            const tIso = `${dayKey}T${r.scheduledTime}:00`;
+            evs.push({
+              id: `${m.id}-${r.scheduledTime}`,
+              t: new Date(tIso).getTime(),
+              timeLabel: fmtTime(tIso),
+              cat: es.journal.cat.medication,
+              emoji: '💊',
+              color: 'var(--deep-blue)',
+              main: (
+                <span className="text-text-primary">
+                  {m.name}{' '}
+                  <span className="font-bold" style={{ color: r.taken ? 'var(--cyan)' : 'var(--text-tertiary)' }}>
+                    {r.taken ? `· ${es.journal.taken}` : `· ${es.journal.pending}`}
+                  </span>
+                </span>
+              ),
+            });
+          }),
+      );
+
+    // Khumpi notes.
+    doctorNotes
+      .filter((n) => n.personId === personId && isSameDay(n.timestamp, iso))
+      .forEach((n) =>
+        evs.push({
+          id: n.id,
+          t: new Date(n.timestamp).getTime(),
+          timeLabel: fmtTime(n.timestamp),
+          cat: es.journal.cat.note,
+          emoji: '📝',
+          color: 'var(--cyan)',
+          main: <span className="leading-relaxed text-text-primary">{n.text}</span>,
+        }),
+      );
+
+    return evs.sort((a, b) => a.t - b.t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logs, medications, doctorNotes, personId, selected, dayKey, iso]);
 
   // mini-calendar week
   const week = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(selected), i)), [selected]);
@@ -120,8 +185,6 @@ export function JournalScreen() {
 
   const rel = relativeDayLabel(iso);
   const primaryLabel = rel === 'hoy' ? es.journal.today : rel === 'ayer' ? es.journal.yesterday : fmtDate(selected);
-
-  const startEdit = (id: string) => setEditingId((cur) => (cur === id ? null : id));
 
   return (
     <div className="flex h-full flex-col bg-bg-base">
@@ -149,16 +212,9 @@ export function JournalScreen() {
             <ChevronLeftIcon size={22} />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setShowCalendar((v) => !v)}
-            aria-expanded={showCalendar}
-            className="flex flex-1 flex-col items-center"
-          >
+          <button type="button" onClick={() => setShowCalendar((v) => !v)} aria-expanded={showCalendar} className="flex flex-1 flex-col items-center">
             <span className="font-serif text-[18px] font-bold leading-tight text-text-primary">{primaryLabel}</span>
-            {(rel === 'hoy' || rel === 'ayer') && (
-              <span className="text-xs text-text-tertiary">{fmtDate(selected)}</span>
-            )}
+            {(rel === 'hoy' || rel === 'ayer') && <span className="text-xs text-text-tertiary">{fmtDate(selected)}</span>}
           </button>
 
           <button
@@ -183,12 +239,7 @@ export function JournalScreen() {
 
         <AnimatePresence>
           {showCalendar && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
               <div className="mt-2 grid grid-cols-7 gap-1 pb-1">
                 {es.journal.weekdayInitials.map((w, i) => (
                   <span key={i} className="text-center text-[11px] font-semibold text-text-tertiary">
@@ -208,18 +259,12 @@ export function JournalScreen() {
                       className="flex flex-col items-center gap-1 rounded-md py-1.5 transition-colors disabled:opacity-30"
                       style={{ background: sel ? 'var(--cyan-tint)' : 'transparent' }}
                     >
-                      <span
-                        className="text-sm font-bold"
-                        style={{ color: sel ? 'var(--cyan)' : 'var(--text-secondary)' }}
-                      >
+                      <span className="text-sm font-bold" style={{ color: sel ? 'var(--cyan)' : 'var(--text-secondary)' }}>
                         {d.getDate()}
                       </span>
                       <span
                         className="h-1.5 w-1.5 rounded-full"
-                        style={{
-                          background:
-                            dot === 'spike' ? 'var(--amber)' : dot === 'ok' ? 'var(--cyan)' : 'var(--border)',
-                        }}
+                        style={{ background: dot === 'spike' ? 'var(--amber)' : dot === 'ok' ? 'var(--cyan)' : 'var(--border)' }}
                       />
                     </button>
                   );
@@ -230,139 +275,99 @@ export function JournalScreen() {
         </AnimatePresence>
       </header>
 
-      {/* day content */}
-      <div className="flex flex-col gap-3 overflow-y-auto px-4 py-4 no-scrollbar">
-        {isEmpty ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pt-12 text-center">
+      {/* day timeline */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 no-scrollbar">
+        {events.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 px-6 pt-12 text-center">
             <span className="text-4xl" aria-hidden>
               🌤️
             </span>
             <p className="max-w-[260px] text-[16px] leading-relaxed text-text-secondary">{es.journal.empty}</p>
           </div>
         ) : (
-          <>
-            {!!hasMorning && (
-              <SectionCard icon="🌅" title={es.journal.sections.morning}>
-                {sleeps.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 text-[15px] text-text-primary">
-                    <MoonIcon size={18} className="text-deep-blue" />
-                    {es.journal.sleepLabel(s.payload.hours)}
-                  </div>
-                ))}
-                {moods.map((m) => (
-                  <div key={m.id} className="flex items-center gap-2 text-[15px] text-text-primary">
-                    <span className="text-lg">{MOOD_EMOJI[m.payload.score - 1]}</span>
-                    {es.journal.moodLabel}
-                  </div>
-                ))}
-                {stresses.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 text-[15px] text-text-primary">
-                    <span className="text-lg">{STRESS_EMOJI[s.payload.level - 1]}</span>
-                    {es.journal.stressLabel}
-                  </div>
-                ))}
-              </SectionCard>
-            )}
-
-            {!!glucoses.length && (
-              <SectionCard icon="🩸" title={es.journal.sections.glucose}>
-                {glucoses.map((g) =>
-                  editingId === g.id ? (
-                    <GlucoseEditor key={g.id} entry={g} onSave={(p) => { editLog(g.id, { payload: p } as Partial<LogEntry>); setEditingId(null); }} onCancel={() => setEditingId(null)} />
-                  ) : (
-                    <EntryRow
-                      key={g.id}
-                      onEdit={() => startEdit(g.id)}
-                      main={
-                        <span className="font-bold" style={{ color: g.payload.value >= 180 ? 'var(--amber)' : 'var(--text-primary)' }}>
-                          {g.payload.value} {es.confirmation.units.mgdl}
-                        </span>
-                      }
-                      sub={`${es.enums.glucoseMoment[g.payload.moment]} · ${fmtTime(g.timestamp)}`}
-                    />
-                  ),
-                )}
-              </SectionCard>
-            )}
-
-            {!!meals.length && (
-              <SectionCard icon="🍽️" title={es.journal.sections.meals}>
-                {meals.map((m) =>
-                  editingId === m.id ? (
-                    <MealEditor key={m.id} entry={m} onSave={(p) => { editLog(m.id, { payload: p } as Partial<LogEntry>); setEditingId(null); }} onCancel={() => setEditingId(null)} />
-                  ) : (
-                    <EntryRow
-                      key={m.id}
-                      onEdit={() => startEdit(m.id)}
-                      main={<span className="font-semibold text-text-primary">{m.payload.description}</span>}
-                      sub={`${es.enums.mealContext[m.payload.context]} · ${fmtTime(m.timestamp)}`}
-                    />
-                  ),
-                )}
-              </SectionCard>
-            )}
-
-            {!!adherence.length && (
-              <SectionCard icon="💊" title={es.journal.sections.medication}>
-                {adherence.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2 text-[15px]">
-                    <span className="text-text-primary">
-                      {r.med} · {r.scheduledTime}
+          <ul className="relative">
+            {/* connector rail */}
+            <span className="absolute bottom-3 top-2 w-px bg-border" style={{ left: '74px' }} aria-hidden />
+            {events.map((ev, i) => (
+              <motion.li
+                key={ev.id}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.28, delay: Math.min(i * 0.04, 0.3) }}
+                className="relative flex gap-3 pb-5 last:pb-1"
+              >
+                <span className="w-14 shrink-0 pt-1 text-right text-[11px] font-semibold leading-tight text-text-tertiary">
+                  {ev.timeLabel}
+                </span>
+                <span
+                  className="relative z-10 mt-1.5 h-4 w-4 shrink-0 rounded-full ring-4 ring-[color:var(--bg-base)]"
+                  style={{ background: ev.color }}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1 pb-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                      style={{ background: tint(ev.color), color: ev.color }}
+                    >
+                      <span aria-hidden>{ev.emoji}</span> {ev.cat}
                     </span>
-                    {r.taken ? (
-                      <span className="flex items-center gap-1 text-sm font-bold text-cyan">
-                        <CheckIcon size={16} /> {es.journal.taken}
-                      </span>
-                    ) : (
-                      <span className="text-sm font-semibold text-text-tertiary">{es.journal.pending}</span>
+                    {ev.edit && editingId !== ev.id && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(ev.id)}
+                        aria-label={es.journal.edit}
+                        className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-tertiary transition-colors active:bg-bg-sunken"
+                      >
+                        <EditIcon size={16} />
+                      </button>
                     )}
                   </div>
-                ))}
-              </SectionCard>
-            )}
 
-            {!!dayNotes.length && (
-              <SectionCard icon="📝" title={es.journal.sections.notes}>
-                {dayNotes.map((n) => (
-                  <div key={n.id} className="text-[15px] leading-relaxed text-text-primary">
-                    <span className="mr-2 text-xs font-semibold text-text-tertiary">{fmtTime(n.timestamp)}</span>
-                    {n.text}
-                  </div>
-                ))}
-              </SectionCard>
-            )}
-          </>
+                  {editingId === ev.id && ev.glucose ? (
+                    <div className="mt-2">
+                      <GlucoseEditor
+                        entry={ev.glucose}
+                        onSave={(p) => {
+                          editLog(ev.glucose!.id, { payload: p } as Partial<LogEntry>);
+                          setEditingId(null);
+                        }}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    </div>
+                  ) : editingId === ev.id && ev.meal ? (
+                    <div className="mt-2">
+                      <MealEditor
+                        entry={ev.meal}
+                        onSave={(p) => {
+                          editLog(ev.meal!.id, { payload: p } as Partial<LogEntry>);
+                          setEditingId(null);
+                        }}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-[15px]">
+                      {ev.main}
+                      {ev.sub && <span className="mt-0.5 block text-xs text-text-secondary">{ev.sub}</span>}
+                    </div>
+                  )}
+                </div>
+              </motion.li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
   );
 }
 
-// --- small pieces ---------------------------------------------------------
-
-function EntryRow({ main, sub, onEdit }: { main: React.ReactNode; sub: string; onEdit: () => void }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <div className="truncate text-[15px]">{main}</div>
-        <div className="text-xs text-text-secondary">{sub}</div>
-      </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        aria-label={es.journal.edit}
-        className="touch-target grid h-9 w-9 shrink-0 place-items-center rounded-full text-text-tertiary transition-colors active:bg-bg-sunken"
-      >
-        <EditIcon size={18} />
-      </button>
-    </div>
-  );
-}
+// --- inline editors -------------------------------------------------------
 
 function EditActions({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
     <div className="flex gap-2 pt-1">
-      <button type="button" onClick={onSave} className="rounded-full bg-cyan px-4 py-1.5 text-sm font-bold text-[color:var(--text-on-brand)]">
+      <button type="button" onClick={onSave} className="press btn-primary rounded-full px-4 py-1.5 text-sm font-bold">
         {es.journal.save}
       </button>
       <button type="button" onClick={onCancel} className="rounded-full border border-border px-4 py-1.5 text-sm font-bold text-text-secondary">
