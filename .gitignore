@@ -5,6 +5,10 @@ dist-ssr
 .vite
 *.tsbuildinfo
 
+# Local env (secrets — never commit). .env.example stays tracked.
+.env
+.env.*.local
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

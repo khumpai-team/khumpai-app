@@ -6,9 +6,9 @@
  * model replies — keeping the MockAgentProvider focused on parsing/logging.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { agent } from '@/agent';
-import type { AgentEvent, AgentInput } from '@/agent/AgentProvider';
+import type { AgentEvent, AgentInput, RegisterEntryArgs } from '@/agent/AgentProvider';
 import { parseMessage, type ParsedIntent } from '@/agent/parse';
 import {
   anticipateRiskFromContext,
@@ -16,20 +16,70 @@ import {
   detectPattern,
   evaluateRedFlag,
   guardrailRedirect,
+  type DraftEntries,
 } from '@/agent/tools';
 import { recordSuggestion } from '@/lib/prefs';
 import { uid } from '@/lib/id';
 import { es } from '@/data/i18n/es';
 import { AGENT_ES } from '@/data/i18n/agent-es';
-import type { GlucoseMoment, LogEntry, MoodScore, RedFlagLevel, StressLevel } from '@/types';
+import type { GlucoseMoment, LogEntry, MoodScore, Person, RedFlagLevel, StressLevel } from '@/types';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
 
 const DATA_KINDS = ['meal', 'glucose', 'sleep', 'medication', 'symptom'] as const;
-const isDataIntent = (
-  i: ParsedIntent,
-): i is Extract<ParsedIntent, { kind: (typeof DATA_KINDS)[number] }> =>
+type DataIntent = Extract<ParsedIntent, { kind: (typeof DATA_KINDS)[number] }>;
+const isDataIntent = (i: ParsedIntent): i is DataIntent =>
   (DATA_KINDS as readonly string[]).includes(i.kind);
+
+const norm = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/** Range-aware glucose acknowledgement. */
+function glucoseMsg(v: number): string {
+  if (v < 70) return AGENT_ES.glucose.low(v);
+  if (v < 180) return AGENT_ES.glucose.ok(v);
+  if (v < 250) return AGENT_ES.glucose.high(v);
+  return AGENT_ES.glucose.veryHigh(v);
+}
+
+/** Warm acknowledgement for a confirmed draft (local, no agent). */
+function localAck(draft: DraftEntries): string {
+  const e = draft.primary;
+  switch (e.type) {
+    case 'glucose':
+      return glucoseMsg(e.payload.value);
+    case 'meal':
+      return draft.secondary?.type === 'glucose'
+        ? glucoseMsg(draft.secondary.payload.value)
+        : AGENT_ES.confirmations.savedMeal;
+    case 'sleep':
+      return e.payload.hours < 6 ? AGENT_ES.offline.sleepShort(e.payload.hours) : AGENT_ES.confirmations.savedSleep;
+    case 'medication':
+      return AGENT_ES.confirmations.savedMedication;
+    case 'symptom':
+      return evaluateRedFlag(e.payload.description).message;
+    default:
+      return AGENT_ES.confirmations.saved;
+  }
+}
+
+/** Resolve which patient a caregiver entry is for (by name, relation, or default). */
+function resolveTargetPerson(intent: DataIntent, text: string, persons: Person[]): Person | undefined {
+  const n = norm(text);
+  for (const p of persons) {
+    const first = norm(p.name).split(/\s+/)[0];
+    if (first.length >= 3 && n.includes(first)) return p;
+  }
+  if (intent.subject === 'father') {
+    const p = persons.find((x) => x.relation === 'father');
+    if (p) return p;
+  }
+  if (intent.subject === 'mother') {
+    const p = persons.find((x) => x.relation === 'mother');
+    if (p) return p;
+  }
+  return persons.length === 1 ? persons[0] : undefined;
+}
 
 /** Offline acknowledgement, derived from the parsed intent (no network). */
 function offlineReplyFor(intent: ParsedIntent): string {
@@ -47,6 +97,11 @@ export function useChat() {
   const items = useChatStore((s) => s.items);
   const thinking = useChatStore((s) => s.thinking);
   const calm = useChatStore((s) => s.calm);
+
+  // Caregiver flow: a pending entry awaiting a person pick, and per-card acks
+  // for cards we build locally (so confirm streams the right reply).
+  const pendingPickRef = useRef<{ intent: DataIntent } | null>(null);
+  const localAckRef = useRef<Map<string, string>>(new Map());
 
   const drive = useCallback(async (stream: AsyncIterable<AgentEvent>) => {
     const chat = useChatStore.getState();
@@ -275,6 +330,34 @@ export function useChat() {
     [streamSay, runAnticipation],
   );
 
+  // --- Caregiver: register an entry for a chosen patient -----------------
+
+  const registerForPerson = useCallback((intent: DataIntent, person: Person) => {
+    const draft = buildDraftEntries(intent, person.id);
+    const ack = localAck(draft);
+    const callId = uid('call');
+    localAckRef.current.set(callId, ack);
+    const args: RegisterEntryArgs = { entry: draft.primary, secondaryEntry: draft.secondary, ack };
+    useChatStore.getState().addCard({ id: callId, kind: 'card', args, state: 'pending' });
+  }, []);
+
+  const pickPerson = useCallback(
+    async (itemId: string, person: { id: string; name: string; color: string }) => {
+      const pending = pendingPickRef.current;
+      pendingPickRef.current = null;
+      const chat = useChatStore.getState();
+      chat.answerPersonPick(itemId, person.name);
+      if (!pending) return;
+      const full = useAppStore.getState().persons.find((p) => p.id === person.id);
+      if (!full) return;
+      chat.setThinking(true);
+      await sleep(450);
+      chat.setThinking(false);
+      registerForPerson(pending.intent, full);
+    },
+    [registerForPerson],
+  );
+
   // --- Main entry --------------------------------------------------------
 
   const sendUserMessage = useCallback(
@@ -300,6 +383,28 @@ export function useChat() {
         chat.setThinking(true);
         await sleep(550);
         await streamSay(offlineReplyFor(intent));
+        return;
+      }
+
+      // Caregiver front: route diary entries to a patient. Resolve by name or
+      // relation; if it's ambiguous, ask with a clickable person picker.
+      if (app.mode === 'caregiver' && isDataIntent(intent)) {
+        const target = resolveTargetPerson(intent, trimmed, app.persons);
+        if (!target) {
+          pendingPickRef.current = { intent };
+          chat.setThinking(true);
+          await streamSay(es.caregiver.whichPerson);
+          chat.addItem({
+            id: uid('pick'),
+            kind: 'personPick',
+            options: app.persons.map((p) => ({ id: p.id, name: p.name, color: p.color })),
+          });
+          return;
+        }
+        chat.setThinking(true);
+        await sleep(500);
+        chat.setThinking(false);
+        registerForPerson(intent, target);
         return;
       }
 
@@ -351,7 +456,7 @@ export function useChat() {
 
       await drive(agent.sendMessage({ text: trimmed, history }));
     },
-    [drive, runSpikeArc, runSafety],
+    [drive, runSpikeArc, runSafety, registerForPerson, streamSay],
   );
 
   const confirmCard = useCallback(
@@ -361,19 +466,35 @@ export function useChat() {
       savedEntries.forEach((e) => actions.addLog({ ...e, confirmed: true }));
       chat.setCardState(callId, 'saved');
       chat.setThinking(true);
+      // Locally-built (caregiver) cards stream their stored ack; agent cards resume.
+      const localText = localAckRef.current.get(callId);
+      if (localText) {
+        localAckRef.current.delete(callId);
+        await sleep(280);
+        await streamSay(localText);
+        chat.setThinking(false);
+        return;
+      }
       await drive(agent.provideToolResult({ callId, name: 'registerEntry', ok: true, savedEntries }));
     },
-    [drive],
+    [drive, streamSay],
   );
 
   const dismissCard = useCallback(
     async (callId: string) => {
       const chat = useChatStore.getState();
       chat.setCardState(callId, 'dismissed');
+      if (localAckRef.current.has(callId)) {
+        localAckRef.current.delete(callId);
+        chat.setThinking(true);
+        await streamSay('Sin problema, lo dejamos así. 🙂');
+        chat.setThinking(false);
+        return;
+      }
       chat.setThinking(true);
       await drive(agent.provideToolResult({ callId, name: 'registerEntry', ok: false }));
     },
-    [drive],
+    [drive, streamSay],
   );
 
   return {
@@ -386,5 +507,6 @@ export function useChat() {
     answerArcChoice,
     resolveAction,
     saveCheckin,
+    pickPerson,
   };
 }

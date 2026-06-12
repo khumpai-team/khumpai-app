@@ -62,13 +62,22 @@ export interface SafetyItem {
   notified?: boolean;
 }
 
+/** Clickable person chooser (caregiver: "¿para quién es esto?"). */
+export interface PersonPickItem {
+  id: string;
+  kind: 'personPick';
+  options: { id: string; name: string; color: string }[];
+  answeredName?: string;
+}
+
 export type ChatItem =
   | MessageItem
   | CardItem
   | ChoiceItem
   | InsightItem
   | ActionItem
-  | SafetyItem;
+  | SafetyItem
+  | PersonPickItem;
 
 interface ChatState {
   items: ChatItem[];
@@ -85,6 +94,7 @@ interface ChatState {
   addItem: (item: ChatItem) => void;
   answerChoice: (id: string) => void;
   setActionState: (id: string, state: ActionState) => void;
+  answerPersonPick: (id: string, name: string) => void;
   markSafetyNotified: (id: string) => void;
   clearPending: () => void;
   setThinking: (v: boolean) => void;
@@ -128,6 +138,12 @@ export const useChatStore = create<ChatState>()(
         set((s) => ({
           items: s.items.map((it) =>
             it.kind === 'action' && it.id === id ? { ...it, state } : it,
+          ),
+        })),
+      answerPersonPick: (id, name) =>
+        set((s) => ({
+          items: s.items.map((it) =>
+            it.kind === 'personPick' && it.id === id ? { ...it, answeredName: name } : it,
           ),
         })),
       markSafetyNotified: (id) =>

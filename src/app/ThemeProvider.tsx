@@ -5,16 +5,22 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useThemeStore } from '@/store/useThemeStore';
+import { useAppStore } from '@/store/appStore';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = useThemeStore((s) => s.theme);
   const followSystem = useThemeStore((s) => s.followSystem);
   const setTheme = useThemeStore((s) => s.setTheme);
+  const mode = useAppStore((s) => s.mode);
 
-  // Apply attribute.
+  // Apply theme + front (patient/caregiver) attributes.
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-mode', mode);
+  }, [mode]);
 
   // Follow the OS until the user chooses explicitly.
   useEffect(() => {

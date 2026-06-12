@@ -12,8 +12,15 @@ import { dateKey } from '@/lib/dateUtils';
 import { useAppStore } from '@/store/appStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 import { Pillbox } from '@/components/pillbox/Pillbox';
+import { CaregiverDashboard } from '@/screens/CaregiverDashboard';
 import { GearIcon, ChatBubbleIcon } from '@/components/ui/icons';
 import type { SleepLog } from '@/types';
+
+/** Inicio routes to the patient home or the caregiver dashboard by front. */
+export function HomeScreen() {
+  const mode = useAppStore((s) => s.mode);
+  return mode === 'caregiver' ? <CaregiverDashboard /> : <PatientHome />;
+}
 
 /** "20:00" → "8:00 pm". */
 function fmtTime(hhmm: string): string {
@@ -30,7 +37,7 @@ function greetByHour(name: string): string {
   return es.home.greetEvening(name);
 }
 
-export function HomeScreen() {
+function PatientHome() {
   const navigate = useNavigate();
   const user = useAppStore((s) => s.user);
   const logs = useAppStore((s) => s.logs);

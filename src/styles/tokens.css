@@ -117,3 +117,27 @@
 
   color-scheme: dark;
 }
+
+/**
+ * Caregiver front — the whole accent shifts from teal to deep-blue. Applied via
+ * [data-mode="caregiver"] on <html>, layered AFTER both theme blocks so it wins
+ * for light and dark. Only the "cyan" family is remapped; deep-blue, signal
+ * colors and surfaces stay as the active theme defines them.
+ */
+[data-mode='caregiver'] {
+  --cyan: var(--deep-blue);
+  --cyan-strong: var(--deep-blue);
+  --cyan-soft: var(--sky);
+  --cyan-tint: var(--deep-blue-tint);
+  --grad-cyan: linear-gradient(135deg, #2f7fb8 0%, #1f6699 100%);
+  --bubble-user-from: #2f7fb8;
+  --bubble-user-to: #1f6699;
+  --ring: rgba(31, 102, 153, 0.4);
+  --shadow-cyan: 0 8px 22px rgba(31, 102, 153, 0.32);
+}
+[data-theme='dark'][data-mode='caregiver'] {
+  --grad-cyan: linear-gradient(135deg, #4f9ad6 0%, #2f7fb8 100%);
+  --bubble-user-from: #346f9e;
+  --bubble-user-to: #275a82;
+  --ring: rgba(124, 187, 232, 0.45);
+}

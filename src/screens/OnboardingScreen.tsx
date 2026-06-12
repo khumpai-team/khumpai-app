@@ -14,7 +14,6 @@ import { es } from '@/data/i18n/es';
 import { uid } from '@/lib/id';
 import { useAppStore } from '@/store/appStore';
 import { useSessionStore } from '@/store/useSessionStore';
-import type { Person } from '@/types';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { CheckIcon, EditIcon, SendIcon } from '@/components/ui/icons';
@@ -112,8 +111,13 @@ export function OnboardingScreen() {
       say(es.onboarding.askMode(t));
       setStep('mode');
     } else if (step === 'patientName') {
-      const person: Person = { id: uid('person'), name: t, relation: 'father', color: '#1F6699' };
-      useAppStore.setState((s) => ({ persons: [...s.persons, person], currentPersonId: person.id }));
+      // Relabel the data-rich seed patient as the cared-for person, so the
+      // caregiver dashboard has real history to monitor from day one.
+      useAppStore.setState((s) => ({
+        persons: s.persons.map((p) =>
+          p.id === s.currentPersonId ? { ...p, name: t, relation: 'father' } : p,
+        ),
+      }));
       setPatientName(t);
       say(es.onboarding.askContact);
       setStep('contact');

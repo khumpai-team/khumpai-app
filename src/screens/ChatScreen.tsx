@@ -43,6 +43,7 @@ export function ChatScreen() {
     answerArcChoice,
     resolveAction,
     saveCheckin,
+    pickPerson,
   } = useChat();
   const [listening, setListening] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
@@ -59,7 +60,8 @@ export function ChatScreen() {
   useEffect(() => {
     const chat = useChatStore.getState();
     const sess = useSessionStore.getState();
-    const needsCheckin = sess.lastCheckinDate !== todayKey();
+    const isCaregiver = useAppStore.getState().mode === 'caregiver';
+    const needsCheckin = !isCaregiver && sess.lastCheckinDate !== todayKey();
     if (chat.items.length === 0) {
       const name = useAppStore.getState().user.name;
       const h = new Date().getHours();
@@ -212,6 +214,37 @@ export function ChatScreen() {
                 );
               case 'safety':
                 return <SafetyCard key={it.id} id={it.id} level={it.level} message={it.message} notified={it.notified} />;
+              case 'personPick':
+                return (
+                  <div key={it.id} className="ml-[46px] flex flex-wrap gap-2">
+                    {it.options.map((opt) => {
+                      const selected = it.answeredName === opt.name;
+                      const dim = !!it.answeredName && !selected;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          disabled={!!it.answeredName}
+                          onClick={() => pickPerson(it.id, opt)}
+                          className="press flex items-center gap-2 rounded-full border bg-bg-surface py-1.5 pl-1.5 pr-4 text-[15px] font-bold shadow-soft transition-opacity disabled:cursor-default"
+                          style={{
+                            borderColor: selected ? 'var(--cyan)' : 'var(--border)',
+                            color: 'var(--text-primary)',
+                            opacity: dim ? 0.45 : 1,
+                          }}
+                        >
+                          <span
+                            className="grid h-8 w-8 place-items-center rounded-full text-[13px] font-extrabold text-white"
+                            style={{ background: opt.color }}
+                          >
+                            {opt.name.charAt(0).toUpperCase()}
+                          </span>
+                          {opt.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
               default:
                 return null;
             }

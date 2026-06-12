@@ -154,31 +154,56 @@ Pure tools take data as arguments so they're trivially testable. `TOOL_BUDGET =
 
 ---
 
-## 8. Phase-2 needs (not done — no credentials yet)
+## 8. Azure OpenAI ("Foundry") — WIRED (live-tested at the proxy level)
 
-1. **Activate Azure Foundry:** `npm install @azure/ai-projects @azure/identity`, set
-   `AZURE_AI_PROJECT_CONNECTION_STRING` + `AZURE_OPENAI_DEPLOYMENT` (see `.env.example`),
-   and swap the provider in `src/agent/index.ts`. `FoundryAgentProvider` already implements
-   the interface, ships `KHUMPI_SYSTEM_PROMPT` (5 absolute safety rules) and
-   `FOUNDRY_TOOL_DEFINITIONS` (15 JSON schemas). **TODO marked in-file: VERIFY the Azure
-   SDK API against current docs before first run** — `src/agent/foundry-sdk.d.ts` is a
-   minimal stand-in declaration so the project compiles without the package.
-2. **Persist guardrail doctor notes:** `guardrailRedirect` now *builds* a `DoctorNote` for
-   dose/diagnosis/stop refusals; the provider/UI should `actions.addDoctorNote(...)` it so
-   the dangerous question becomes a useful doctor question. (Mock currently surfaces the
-   message; wiring the persist is a small follow-up.)
+The agent can now run against a real Azure OpenAI deployment behind the SAME
+`AgentProvider` seam — **no UI changes**. Architecture:
+
+- **`src/agent/server/foundryProxyPlugin.ts`** — Vite dev-server middleware
+  (`POST /api/foundry/chat`, SSE). Holds the API key, builds
+  `new AzureOpenAI({ endpoint, apiKey, apiVersion, deployment })` (from the `openai`
+  pkg), streams `chat.completions` and relays text deltas + tool calls. **The key never
+  reaches the browser bundle.**
+- **`src/agent/FoundryAgentProvider.ts`** — browser orchestrator (thin SSE client).
+  Runs the 15 tools CLIENT-SIDE via **`src/agent/clientToolRouter.ts`** (they need the
+  Zustand store). `registerEntry` pauses for the confirmation card and resumes on
+  `provideToolResult`; bounded by `TOOL_BUDGET.maxIterations`.
+- **`src/agent/foundryConfig.ts`** — shared `KHUMPI_SYSTEM_PROMPT` (5 safety rules) +
+  `FOUNDRY_TOOL_DEFINITIONS` (typed per-entry payload schemas: glucose→`moment`, meal→`context`, …).
+
+### To run against Azure
+1. Copy `.env.example` → `.env` (gitignored) and fill: `AZURE_OPENAI_ENDPOINT`,
+   `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT` (e.g. `gpt-4.1`), optional
+   `AZURE_OPENAI_API_VERSION` (default `2024-12-01-preview`).
+2. Set `VITE_AGENT_PROVIDER=foundry` (anything else → MockAgentProvider, the default).
+3. Restart `npm run dev` — `.env` and the proxy load at server start.
+
+This resource uses **API-key auth** (`*.cognitiveservices.azure.com`) — NO `az login` /
+`@azure/identity` needed. `@azure/ai-projects` + `@azure/identity` were installed during
+exploration but are now UNUSED (safe to `npm uninstall`).
+
+### Remaining follow-ups
+1. **Click-test the in-UI flow:** card confirm → continuation loop (verified at the proxy
+   level; the browser-side confirm/resume needs a manual click-through).
+2. **Persist guardrail doctor notes:** `guardrailRedirect` *builds* a `DoctorNote` for
+   dose/diagnosis/stop refusals; the provider/UI should `actions.addDoctorNote(...)` it.
 3. `scheduleReminder` is a stub — integrate real device notifications.
-4. `queryRag` uses a hardcoded knowledge base — swap the implementation for Azure AI Search
-   (interface already returns `{ content, source }`).
-5. **Caregiver mode:** types/store support multiple `persons` + third-person parsing
-   (`subject: 'father' | 'mother'`); UI for switching persons is not built.
+4. `queryRag` uses a hardcoded knowledge base — swap for Azure AI Search (interface already
+   returns `{ content, source }`).
+5. **Production:** the dev-only Vite proxy must become a real backend/API route (the key
+   must stay server-side).
+6. **Caregiver mode:** types/store + third-person parsing (`subject: 'father' | 'mother'`)
+   exist; the person-switching UI is not built.
 
 ---
 
 ## 9. Ownership note
 
 The technical core created/owns: `src/types`, `src/data`, `src/store/appStore.ts`,
-`src/lib/*`, `src/agent/*` (parser, tools, providers), and `tests/*`. It did **not**
-modify `src/components`, `src/screens`, `src/app`, `src/styles`, `index.html`, or the
-`src/store` UI stores (`useChatStore`, `useThemeStore`). The only shared, additive
-changes were to `package.json` (deps + test scripts).
+`src/lib/*`, `src/agent/*` (parser, tools, providers, `server/foundryProxyPlugin.ts`,
+`foundryConfig.ts`, `clientToolRouter.ts`), and `tests/*`. **Shared/additive changes**
+(heads-up for the UI agent): `package.json` (deps + test scripts), `vite.config.ts`
+(added a single `foundryProxyPlugin()` line to `plugins`), `.gitignore` (ignore `.env`),
+and `.env.example`. It did **not** modify `src/components`, `src/screens`, `src/app`,
+`src/styles`, `index.html`, or the UI stores (`useChatStore`, `useThemeStore`,
+`useSessionStore`).
