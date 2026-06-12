@@ -57,7 +57,7 @@ export function KhumpiAvatar({ state = 'happy', size = 96, idle = true, head = f
           src={SRC[state]}
           alt={title}
           draggable={false}
-          style={{ position: 'absolute', width: size * 2.4, maxWidth: 'none', height: 'auto', left: '50%', top: size * -0.08, transformOrigin: 'center' }}
+          style={{ position: 'absolute', width: size * 1.6, maxWidth: 'none', height: 'auto', left: '50%', top: size * -0.04, transformOrigin: 'center' }}
           initial={{ x: '-50%' }}
           animate={breathe ? { x: '-50%', scale: [1, 1.045, 1] } : { x: '-50%' }}
           transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
