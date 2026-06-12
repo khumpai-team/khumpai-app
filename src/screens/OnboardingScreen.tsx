@@ -267,7 +267,7 @@ export function OnboardingScreen() {
                 type="button"
                 onClick={submitText}
                 aria-label={es.onboarding.send}
-                className="touch-target grid h-12 w-12 place-items-center rounded-full bg-cyan text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+                className="touch-target grid h-12 w-12 place-items-center rounded-full btn-primary text-[color:var(--text-on-brand)] transition-transform active:scale-95"
               >
                 <SendIcon size={22} />
               </button>
@@ -282,7 +282,7 @@ export function OnboardingScreen() {
 
         {step === 'mode' && (
           <div className="flex flex-col gap-2 pb-1">
-            <button type="button" onClick={() => chooseMode(false)} className="touch-target rounded-full bg-cyan py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow active:scale-95">
+            <button type="button" onClick={() => chooseMode(false)} className="touch-target rounded-full btn-primary py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] active:scale-95">
               {es.onboarding.modeSelf}
             </button>
             <button type="button" onClick={() => chooseMode(true)} className="touch-target rounded-full border border-border bg-bg-base py-3 text-[15px] font-bold text-deep-blue active:bg-bg-sunken">
@@ -293,7 +293,7 @@ export function OnboardingScreen() {
 
         {step === 'appt' && (
           <div className="flex gap-2 pb-1">
-            <button type="button" onClick={() => setStep('apptDate')} className="touch-target flex-1 rounded-full bg-cyan py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow active:scale-95">
+            <button type="button" onClick={() => setStep('apptDate')} className="touch-target flex-1 rounded-full btn-primary py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] active:scale-95">
               {es.onboarding.apptYes}
             </button>
             <button type="button" onClick={() => finishAppt()} className="touch-target flex-1 rounded-full border border-border bg-bg-base py-3 text-[15px] font-bold text-text-secondary active:bg-bg-sunken">
@@ -309,7 +309,7 @@ export function OnboardingScreen() {
               type="button"
               disabled={!apptDate}
               onClick={() => finishAppt(apptDate)}
-              className="touch-target rounded-full bg-cyan px-5 py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow active:scale-95 disabled:opacity-40"
+              className="touch-target rounded-full btn-primary px-5 py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] active:scale-95 disabled:opacity-40"
             >
               {es.onboarding.send}
             </button>
@@ -317,7 +317,7 @@ export function OnboardingScreen() {
         )}
 
         {step === 'done' && (
-          <button type="button" onClick={finish} className="touch-target w-full rounded-full bg-cyan py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow active:scale-95">
+          <button type="button" onClick={finish} className="touch-target w-full rounded-full btn-primary py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] active:scale-95">
             {es.onboarding.start}
           </button>
         )}
@@ -389,7 +389,7 @@ function OnbCard({
         <button
           type="button"
           onClick={() => onConfirm(vals)}
-          className="touch-target flex-1 rounded-full bg-cyan py-2.5 text-[15px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow active:scale-95"
+          className="touch-target flex-1 rounded-full btn-primary py-2.5 text-[15px] font-bold text-[color:var(--text-on-brand)] active:scale-95"
         >
           <span className="inline-flex items-center justify-center gap-1.5">
             <CheckIcon size={17} /> {es.confirmation.confirm}

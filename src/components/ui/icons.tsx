@@ -105,6 +105,14 @@ export const ChatBubbleIcon = (p: IconProps) => (
   </svg>
 );
 
+export const AlertIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 4.5 21 19.5H3L12 4.5Z" />
+    <path d="M12 10v4" />
+    <path d="M12 17h.01" />
+  </svg>
+);
+
 export const PinIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11Z" />

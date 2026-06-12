@@ -114,7 +114,7 @@ export function SettingsScreen() {
             <button
               type="button"
               onClick={saveContact}
-              className="touch-target mt-1 rounded-full bg-cyan py-2.5 text-sm font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+              className="touch-target mt-1 rounded-full btn-primary py-2.5 text-sm font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
             >
               {saved ? es.settings.saved : es.settings.save}
             </button>

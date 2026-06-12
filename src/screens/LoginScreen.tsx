@@ -57,7 +57,7 @@ export function LoginScreen() {
             type="button"
             disabled={!phoneOk}
             onClick={() => setStep('otp')}
-            className="touch-target mt-6 rounded-full bg-cyan py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95 disabled:opacity-40"
+            className="touch-target mt-6 rounded-full btn-primary py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95 disabled:opacity-40"
           >
             {es.login.sendCode}
           </button>
@@ -82,7 +82,7 @@ export function LoginScreen() {
               setLoggedIn(true);
               navigate('/onboarding');
             }}
-            className="touch-target mt-6 rounded-full bg-cyan py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95 disabled:opacity-40"
+            className="touch-target mt-6 rounded-full btn-primary py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95 disabled:opacity-40"
           >
             {es.login.verify}
           </button>

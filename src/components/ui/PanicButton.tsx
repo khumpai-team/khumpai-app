@@ -9,13 +9,14 @@
  */
 
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
 import { uid } from '@/lib/id';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
-import { PhoneIcon, ChatBubbleIcon } from '@/components/ui/icons';
+import { PhoneIcon, ChatBubbleIcon, AlertIcon } from '@/components/ui/icons';
 
 const digits = (phone: string) => phone.replace(/\D/g, '');
 
@@ -35,6 +36,8 @@ export function PanicButton() {
   const contact = useAppStore((s) => s.emergencyContact);
   const userName = useAppStore((s) => s.user.name);
   const [phase, setPhase] = useState<Phase>('idle');
+  // On the chat screen, sit above the composer so we don't clash with send/mic.
+  const onChat = useLocation().pathname === '/chat';
 
   const tel = `tel:${digits(contact.phone)}`;
   const wa = `https://wa.me/${digits(contact.phone)}?text=${encodeURIComponent(
@@ -62,12 +65,17 @@ export function PanicButton() {
         type="button"
         onClick={() => setPhase('confirming')}
         aria-label={es.panic.button}
-        className="touch-target absolute bottom-[92px] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full text-[color:var(--text-on-brand)] shadow-soft-lg transition-transform active:scale-95"
-        style={{ background: 'var(--coral-soft)' }}
+        title={es.panic.button}
+        className="touch-target absolute right-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
+        style={{
+          bottom: onChat ? 148 : 84,
+          background: 'color-mix(in srgb, var(--coral-soft) 14%, var(--bg-surface))',
+          borderColor: 'color-mix(in srgb, var(--coral-soft) 38%, transparent)',
+          color: 'var(--coral-soft)',
+          boxShadow: '0 2px 8px rgba(31,102,153,0.08)',
+        }}
       >
-        <span className="text-2xl" aria-hidden>
-          ＋
-        </span>
+        <AlertIcon size={21} />
       </button>
 
       <AnimatePresence>

@@ -1,65 +1,91 @@
 /**
- * Khumpai design tokens.
- * Light is the default; dark mode is applied via [data-theme="dark"].
+ * Khumpai design tokens — "quiet premium clinical".
+ * Light is default; dark mode via [data-theme="dark"].
  * Warm, blue-tinted, never punitive. Red is reserved for true emergencies only.
+ *
+ * Surfaces are layered (base < sunken < surface) with hairline ink borders and
+ * a two-layer shadow system (ambient + key) for real depth. Teal is the
+ * confident primary, applied as a subtle gradient on key actions.
  */
 
 :root,
 [data-theme='light'] {
   /* Brand */
-  --cyan: #45b0a8;
-  --cyan-strong: #389990;
+  --cyan: #2f9e93; /* primary teal — slightly deeper for contrast/premium feel */
+  --cyan-strong: #1f8479; /* gradient end / pressed */
+  --cyan-soft: #6fc6bd; /* light teal */
   --sky: #8dcded;
   --deep-blue: #1f6699;
+  --ink: #0f2429; /* near-black teal ink, for borders/shadows */
 
-  /* Surfaces */
-  --bg-base: #fafbfc;
+  /* Surfaces — more separation = more depth */
+  --bg-base: #f3f7f9;
   --bg-surface: #ffffff;
-  --bg-sunken: #eef5fb;
-  --border: rgba(31, 102, 153, 0.1);
+  --bg-sunken: #e8f0f4;
+  --border: rgba(15, 36, 41, 0.08);
+  --border-strong: rgba(15, 36, 41, 0.14);
 
   /* Text */
-  --text-primary: #1a2e32;
-  --text-secondary: #5a6b72;
-  --text-tertiary: #8a98a0;
+  --text-primary: #122a2e;
+  --text-secondary: #51646b;
+  --text-tertiary: #8597a0;
   --text-on-brand: #ffffff;
 
   /* Signal (used sparingly) */
   --coral-soft: #e8836b; /* panic button ONLY */
-  --amber: #e8a13d; /* offline / warning */
+  --amber: #d9913a; /* offline / warning */
   --danger: #e24b4a; /* true emergency ONLY */
 
   /* Chat bubbles */
   --bubble-khumpi: #ffffff;
-  --bubble-user: #8dcded;
-  --bubble-user-text: #143a52;
+  --bubble-user-from: #34a99d;
+  --bubble-user-to: #2a8f85;
+  --bubble-user-text: #ffffff;
 
   /* Tints derived from brand, for subtle fills */
-  --cyan-tint: rgba(69, 176, 168, 0.12);
-  --sky-tint: rgba(141, 205, 237, 0.22);
+  --cyan-tint: rgba(47, 158, 147, 0.12);
+  --sky-tint: rgba(141, 205, 237, 0.2);
   --deep-blue-tint: rgba(31, 102, 153, 0.1);
+  --amber-tint: rgba(217, 145, 58, 0.14);
+  --coral-tint: rgba(232, 131, 107, 0.14);
+
+  /* Gradients */
+  --grad-cyan: linear-gradient(135deg, #34a99d 0%, #1f8479 100%);
+  --grad-mesh:
+    radial-gradient(110% 70% at 12% -5%, rgba(141, 205, 237, 0.28), transparent 55%),
+    radial-gradient(90% 80% at 105% 8%, rgba(47, 158, 147, 0.18), transparent 50%);
+
+  /* Two-layer shadow system */
+  --shadow-sm: 0 1px 2px rgba(15, 36, 41, 0.04), 0 1px 3px rgba(31, 102, 153, 0.05);
+  --shadow-md: 0 2px 6px rgba(15, 36, 41, 0.05), 0 10px 26px rgba(31, 102, 153, 0.09);
+  --shadow-lg: 0 4px 12px rgba(15, 36, 41, 0.06), 0 22px 48px rgba(31, 102, 153, 0.14);
+  --shadow-cyan: 0 8px 22px rgba(47, 158, 147, 0.32);
+  --ring: rgba(47, 158, 147, 0.35);
 
   color-scheme: light;
 }
 
 [data-theme='dark'] {
-  /* Brand — lightened for contrast on dark navy */
+  /* Brand — lightened for contrast on dark teal-navy */
   --cyan: #5dc4bc;
-  --cyan-strong: #6fd2ca;
+  --cyan-strong: #7ad3cb;
+  --cyan-soft: #2f6f69;
   --sky: #a5d8f0;
-  --deep-blue: #6bb0e0;
+  --deep-blue: #7cbbe8;
+  --ink: #000000;
 
-  /* Surfaces — warm dark navy, never cold gray */
-  --bg-base: #10181f;
-  --bg-surface: #1a242e;
-  --bg-sunken: #131c25;
-  --border: rgba(165, 216, 240, 0.12);
+  /* Surfaces — warm dark teal-navy, never cold gray */
+  --bg-base: #0d1419;
+  --bg-surface: #18222b;
+  --bg-sunken: #121b22;
+  --border: rgba(165, 216, 240, 0.1);
+  --border-strong: rgba(165, 216, 240, 0.18);
 
   /* Text */
-  --text-primary: #eaf2f6;
-  --text-secondary: #a9bcc6;
-  --text-tertiary: #74878f;
-  --text-on-brand: #0c1318;
+  --text-primary: #eef5f8;
+  --text-secondary: #aabcc6;
+  --text-tertiary: #71858f;
+  --text-on-brand: #06100f;
 
   /* Signal */
   --coral-soft: #f0987f;
@@ -67,13 +93,27 @@
   --danger: #f06a69;
 
   /* Chat bubbles */
-  --bubble-khumpi: #1f2c38;
-  --bubble-user: #2c4a5e;
-  --bubble-user-text: #dcefff;
+  --bubble-khumpi: #1f2c37;
+  --bubble-user-from: #2f8f85;
+  --bubble-user-to: #246f67;
+  --bubble-user-text: #f0fbf9;
 
   --cyan-tint: rgba(93, 196, 188, 0.16);
-  --sky-tint: rgba(165, 216, 240, 0.14);
-  --deep-blue-tint: rgba(107, 176, 224, 0.16);
+  --sky-tint: rgba(165, 216, 240, 0.12);
+  --deep-blue-tint: rgba(124, 187, 232, 0.16);
+  --amber-tint: rgba(240, 179, 90, 0.16);
+  --coral-tint: rgba(240, 152, 127, 0.16);
+
+  --grad-cyan: linear-gradient(135deg, #54c0b7 0%, #2f9387 100%);
+  --grad-mesh:
+    radial-gradient(110% 70% at 12% -5%, rgba(93, 196, 188, 0.14), transparent 55%),
+    radial-gradient(90% 80% at 105% 8%, rgba(124, 187, 232, 0.1), transparent 50%);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.4), 0 24px 50px rgba(0, 0, 0, 0.4);
+  --shadow-cyan: 0 8px 22px rgba(47, 158, 147, 0.3);
+  --ring: rgba(93, 196, 188, 0.45);
 
   color-scheme: dark;
 }

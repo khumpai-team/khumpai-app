@@ -275,7 +275,7 @@ export function ConfirmationCard({ entry, secondaryEntry, state, onConfirm, onDi
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: reduce ? 1 : [0.85, 1.08, 1] }}
           transition={{ duration: 0.42, ease: 'easeOut' }}
-          className="ml-10 inline-flex items-center gap-2 self-start rounded-full bg-cyan px-4 py-2 text-[15px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow"
+          className="btn-primary ml-10 inline-flex items-center gap-2 self-start rounded-full px-4 py-2 text-[15px] font-bold"
         >
           <CheckIcon size={18} />
           {es.confirmation.saved}
@@ -341,7 +341,7 @@ export function ConfirmationCard({ entry, secondaryEntry, state, onConfirm, onDi
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="touch-target flex-1 rounded-full bg-cyan px-4 text-[16px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+                className="press btn-primary touch-target flex-1 rounded-full px-4 text-[16px] font-bold"
               >
                 {es.confirmation.confirm}
               </button>

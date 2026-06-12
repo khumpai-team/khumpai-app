@@ -56,7 +56,7 @@ export function WelcomeScreen() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.5 }}
-        className="touch-target absolute bottom-10 left-8 right-8 rounded-full bg-cyan py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+        className="touch-target absolute bottom-10 left-8 right-8 rounded-full btn-primary py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
       >
         {es.welcome.cta} →
       </motion.button>

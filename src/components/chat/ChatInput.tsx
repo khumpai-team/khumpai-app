@@ -51,15 +51,15 @@ export function ChatInput({
   const canSend = text.trim().length > 0;
 
   return (
-    <div className="flex items-end gap-2 border-t border-border bg-bg-surface px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
-      <div className="flex flex-1 items-center rounded-full border border-border bg-bg-base px-4 py-1">
+    <div className="flex items-end gap-2 border-t border-border bg-bg-surface px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
+      <div className="flex flex-1 items-center rounded-[22px] border border-border bg-bg-base px-4 shadow-[inset_0_1px_2px_rgba(15,36,41,0.04)] transition-colors focus-within:border-border-strong">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }}
           placeholder={listening ? es.chat.statusListening : es.chat.inputPlaceholder}
           aria-label={es.chat.inputPlaceholder}
-          className="min-h-[40px] w-full bg-transparent text-[16px] text-text-primary placeholder:text-text-tertiary focus:outline-none"
+          className="min-h-[44px] w-full bg-transparent text-[16px] text-text-primary placeholder:text-text-tertiary focus:outline-none"
         />
       </div>
 
@@ -68,7 +68,7 @@ export function ChatInput({
           type="button"
           onClick={send}
           aria-label={es.chat.sendLabel}
-          className="touch-target grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cyan text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+          className="press btn-primary touch-target grid h-12 w-12 shrink-0 place-items-center rounded-full"
         >
           <SendIcon size={22} />
         </button>
@@ -78,18 +78,18 @@ export function ChatInput({
           onClick={toggleMic}
           aria-label={listening ? es.chat.micStop : es.chat.micLabel}
           aria-pressed={listening}
-          className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
-          style={{ background: listening ? 'var(--deep-blue)' : 'var(--cyan)' }}
+          className="press touch-target relative grid h-12 w-12 shrink-0 place-items-center rounded-full text-[color:var(--text-on-brand)]"
+          style={{ background: listening ? 'var(--deep-blue)' : 'var(--grad-cyan)', boxShadow: 'var(--shadow-cyan)' }}
         >
           {listening && (
             <motion.span
               className="absolute inset-0 rounded-full"
               style={{ background: 'var(--cyan)' }}
-              animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+              animate={{ scale: [1, 1.55], opacity: [0.45, 0] }}
               transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
             />
           )}
-          <MicIcon size={26} />
+          <MicIcon size={24} />
         </button>
       )}
     </div>

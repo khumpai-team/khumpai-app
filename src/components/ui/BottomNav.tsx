@@ -74,7 +74,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Navegación principal"
-      className="relative z-20 flex items-stretch border-t border-border bg-bg-surface px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5"
+      className="relative z-20 flex items-stretch border-t border-border bg-bg-surface px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(31,102,153,0.06)]"
     >
       <SideTab to="/home" label={es.nav.home}>
         {(active) => <HomeIcon active={active} />}
@@ -85,10 +85,11 @@ export function BottomNav() {
         <NavLink
           to="/chat"
           aria-label={es.nav.chat}
-          className="touch-target absolute -top-6 grid h-[68px] w-[68px] place-items-center rounded-full border-4 border-bg-surface bg-cyan shadow-cyan-glow transition-transform active:scale-95"
+          className="press touch-target absolute -top-7 grid h-[70px] w-[70px] place-items-center rounded-full border-[5px] border-bg-surface"
+          style={{ background: 'var(--grad-cyan)', boxShadow: 'var(--shadow-cyan)' }}
         >
           <span className="grid h-[52px] w-[52px] place-items-center rounded-full">
-            <KhumpiAvatar state="happy" size={44} idle={false} title={es.nav.chat} />
+            <KhumpiAvatar state="happy" size={46} idle={false} title={es.nav.chat} />
           </span>
         </NavLink>
       </div>

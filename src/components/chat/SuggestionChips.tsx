@@ -7,15 +7,15 @@ import { es } from '@/data/i18n/es';
 
 export function SuggestionChips({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div>
-      <p className="mb-2 px-1 text-xs font-semibold text-text-tertiary">{es.chat.suggestionsTitle}</p>
-      <div className="flex flex-wrap gap-2">
+    <div className="ml-[46px]">
+      <p className="eyebrow mb-2 px-1">{es.chat.suggestionsTitle}</p>
+      <div className="flex flex-col items-start gap-2">
         {es.chat.suggestions.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => onPick(s)}
-            className="rounded-full border border-border bg-bg-surface px-3.5 py-2 text-left text-sm font-semibold text-deep-blue shadow-soft transition-transform active:scale-95"
+            className="press rounded-[16px] rounded-bl-[7px] border border-border bg-bg-surface px-4 py-2.5 text-left text-[14px] font-semibold text-text-primary shadow-soft transition-colors hover:border-border-strong"
           >
             {s}
           </button>

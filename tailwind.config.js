@@ -18,6 +18,9 @@ export default {
         amber: 'var(--amber)',
         danger: 'var(--danger)',
         border: 'var(--border)',
+        'border-strong': 'var(--border-strong)',
+        'cyan-soft': 'var(--cyan-soft)',
+        ink: 'var(--ink)',
       },
       fontFamily: {
         sans: ['Nunito', 'system-ui', 'sans-serif'],
@@ -31,10 +34,14 @@ export default {
         full: '9999px',
       },
       boxShadow: {
-        soft: '0 4px 16px rgba(31,102,153,0.08)',
-        'soft-lg': '0 8px 28px rgba(31,102,153,0.12)',
-        'soft-xl': '0 16px 44px rgba(31,102,153,0.16)',
-        'cyan-glow': '0 8px 24px rgba(69,176,168,0.32)',
+        soft: 'var(--shadow-sm)',
+        'soft-md': 'var(--shadow-md)',
+        'soft-lg': 'var(--shadow-md)',
+        'soft-xl': 'var(--shadow-lg)',
+        'cyan-glow': 'var(--shadow-cyan)',
+      },
+      backgroundImage: {
+        'grad-cyan': 'var(--grad-cyan)',
       },
       maxWidth: {
         phone: '390px',

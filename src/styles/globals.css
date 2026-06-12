@@ -23,36 +23,78 @@
     color: var(--text-primary);
     background: var(--bg-base);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern', 'liga';
   }
 
+  /* Serif display — used boldly, with tight optical tracking. */
   h1,
   h2,
   h3,
   .font-serif {
     font-family: 'Source Serif Pro', Georgia, serif;
+    letter-spacing: -0.012em;
   }
 
-  /* Always-visible, brand-tinted focus ring for keyboard users. */
+  ::selection {
+    background: var(--cyan-tint);
+    color: var(--text-primary);
+  }
+
+  /* Soft, premium focus ring (not a hard outline). */
   :focus-visible {
-    outline: 3px solid var(--cyan);
-    outline-offset: 2px;
-    border-radius: 6px;
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring);
+    border-radius: 10px;
   }
 
-  /* Touch targets: minimum 48px enforced via utility, see components. */
   button {
     font-family: inherit;
   }
 }
 
+@layer components {
+  /* The one card language: hairline border + layered shadow. */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  .press {
+    transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .press:active {
+    transform: scale(0.96);
+  }
+
+  /* Primary action: confident teal gradient with a soft glow. */
+  .btn-primary {
+    background: var(--grad-cyan);
+    color: var(--text-on-brand);
+    box-shadow: var(--shadow-cyan);
+  }
+}
+
 @layer utilities {
-  /* The phone frame backdrop on desktop. */
+  /* Phone-frame backdrop on desktop: brand mesh + faint grain. */
   .device-backdrop {
-    background:
-      radial-gradient(120% 80% at 15% 0%, rgba(141, 205, 237, 0.18), transparent 60%),
-      radial-gradient(100% 90% at 100% 100%, rgba(69, 176, 168, 0.14), transparent 55%),
-      var(--bg-sunken);
+    background-color: var(--bg-sunken);
+    background-image: var(--grad-mesh);
+  }
+
+  /* A barely-there grain overlay for tactile depth. */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -63,13 +105,25 @@
     scrollbar-width: none;
   }
 
+  /* Thin, brand-tinted scrollbar for scrolling regions that show one. */
+  .pretty-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .pretty-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .pretty-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 9999px;
+  }
+
   .touch-target {
     min-width: 48px;
     min-height: 48px;
   }
 }
 
-/* Respect users who prefer less motion. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

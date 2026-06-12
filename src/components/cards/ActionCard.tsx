@@ -43,7 +43,7 @@ export function ActionCard({
           <button
             type="button"
             onClick={onAccept}
-            className="touch-target flex-1 rounded-full bg-cyan px-4 text-[15px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+            className="touch-target flex-1 rounded-full btn-primary px-4 text-[15px] font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
           >
             {acceptLabel}
           </button>

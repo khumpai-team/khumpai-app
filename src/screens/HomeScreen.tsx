@@ -121,7 +121,7 @@ export function HomeScreen() {
                   <button
                     type="button"
                     onClick={confirmDose}
-                    className="touch-target rounded-full bg-cyan px-4 py-2 text-sm font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+                    className="touch-target rounded-full btn-primary px-4 py-2 text-sm font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
                   >
                     {es.home.markTaken}
                   </button>
@@ -149,7 +149,7 @@ export function HomeScreen() {
         <button
           type="button"
           onClick={() => navigate('/chat')}
-          className="touch-target mt-1 flex items-center justify-center gap-2 rounded-full bg-cyan py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] shadow-cyan-glow transition-transform active:scale-95"
+          className="touch-target mt-1 flex items-center justify-center gap-2 rounded-full btn-primary py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
         >
           <ChatBubbleIcon size={22} /> {es.home.cta}
         </button>
