@@ -162,6 +162,8 @@ export const es = {
       `Esta semana me contaste ${n} ${n === 1 ? 'día' : 'días'}. ¡Eso ayuda un montón! 🌱`,
     weekZero: 'Cuéntame algo cuando quieras — sin apuro. Aquí estoy. 🌱',
     cta: 'Hablar con Khumpi',
+    insightsTitle: 'Lo que voy notando',
+    achievementsTitle: 'Tus logros',
   },
 
   caregiver: {
@@ -210,6 +212,14 @@ export const es = {
 
   settings: {
     title: 'Ajustes',
+    account: 'Tu cuenta',
+    rolePatient: 'Paciente',
+    roleCaregiver: 'Cuidador',
+    signOut: 'Cerrar sesión',
+    signOutTitle: '¿Cerrar sesión?',
+    signOutBody: 'Volverás a la pantalla de inicio. Para esta demo, los datos se reiniciarán.',
+    signOutConfirm: 'Sí, cerrar sesión',
+    stay: 'Quedarme',
     appearance: 'Apariencia',
     theme: 'Tema',
     light: 'Claro',
@@ -246,6 +256,12 @@ export const es = {
       `✓ De vuelta — sincronizando ${n} ${n === 1 ? 'registro' : 'registros'}…`,
     reconnected: '✓ De vuelta — todo sincronizado',
     reconnectMsg: 'Ya vi lo que me contaste sin señal 💚 Lo dejé todo guardado.',
+    emergencyLine: (name: string, phone: string) =>
+      `Si te sientes mal, avisa a ${name}: ${phone}.`,
+  },
+
+  achievements: {
+    unlocked: (title: string, desc: string) => `🎉 ¡${title}! ${desc}`,
   },
 
   welcome: {

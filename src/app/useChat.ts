@@ -19,6 +19,8 @@ import {
   type DraftEntries,
 } from '@/agent/tools';
 import { recordSuggestion } from '@/lib/prefs';
+import { evaluateOfflineRules } from '@/lib/offlineRules';
+import { evaluateAchievements } from '@/lib/achievements';
 import { uid } from '@/lib/id';
 import { es } from '@/data/i18n/es';
 import { AGENT_ES } from '@/data/i18n/agent-es';
@@ -81,16 +83,6 @@ function resolveTargetPerson(intent: DataIntent, text: string, persons: Person[]
   return persons.length === 1 ? persons[0] : undefined;
 }
 
-/** Offline acknowledgement, derived from the parsed intent (no network). */
-function offlineReplyFor(intent: ParsedIntent): string {
-  if (intent.kind === 'glucose') {
-    if (intent.value >= 250) return AGENT_ES.offline.glucoseVeryHigh(intent.value);
-    if (intent.value < 70) return AGENT_ES.offline.glucoseLow(intent.value);
-  }
-  if (intent.kind === 'sleep' && intent.hours < 5) return AGENT_ES.offline.sleepShort(intent.hours);
-  return AGENT_ES.offline.noConnection;
-}
-
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function useChat() {
@@ -142,6 +134,17 @@ export function useChat() {
     }
     chat.endMessage(id);
   }, []);
+
+  /** Evaluate milestone achievements and celebrate any newly unlocked ones. */
+  const celebrate = useCallback(async () => {
+    const app = useAppStore.getState();
+    const fresh = evaluateAchievements(app);
+    fresh.forEach((a) => app.actions.addAchievement(a));
+    for (const a of fresh) {
+      await sleep(400);
+      await streamSay(es.achievements.unlocked(a.title, a.description));
+    }
+  }, [streamSay]);
 
   // --- The emotional arc: spike → calm → why → one action ----------------
 
@@ -326,8 +329,9 @@ export function useChat() {
       await sleep(300);
       await streamSay(es.checkin.thanks);
       await runAnticipation();
+      await celebrate();
     },
-    [streamSay, runAnticipation],
+    [streamSay, runAnticipation, celebrate],
   );
 
   // --- Caregiver: register an entry for a chosen patient -----------------
@@ -373,16 +377,28 @@ export function useChat() {
 
       const intent = parseMessage(trimmed);
 
-      // Offline: queue the entry for later sync and reply from local rules.
+      // Offline: queue the entry for later sync and reply from deterministic
+      // local rules, evaluated as if the just-spoken entries were already logged
+      // (they're queued, not yet in `logs`).
       if (offline) {
+        const drafts: LogEntry[] = [];
         if (isDataIntent(intent)) {
           const draft = buildDraftEntries(intent, app.currentPersonId);
-          app.actions.enqueueOffline(draft.primary);
-          if (draft.secondary) app.actions.enqueueOffline(draft.secondary);
+          drafts.push(draft.primary);
+          if (draft.secondary) drafts.push(draft.secondary);
+          drafts.forEach((d) => app.actions.enqueueOffline(d));
         }
         chat.setThinking(true);
         await sleep(550);
-        await streamSay(offlineReplyFor(intent));
+        const snapshot = { ...app, logs: [...app.logs, ...drafts] };
+        const rule = evaluateOfflineRules(snapshot);
+        await streamSay(rule?.message ?? AGENT_ES.offline.noConnection);
+        if (rule?.showEmergencyContact && app.emergencyContact) {
+          await sleep(200);
+          await streamSay(
+            es.offline.emergencyLine(app.emergencyContact.name, app.emergencyContact.phone),
+          );
+        }
         return;
       }
 
@@ -473,11 +489,13 @@ export function useChat() {
         await sleep(280);
         await streamSay(localText);
         chat.setThinking(false);
+        await celebrate();
         return;
       }
       await drive(agent.provideToolResult({ callId, name: 'registerEntry', ok: true, savedEntries }));
+      await celebrate();
     },
-    [drive, streamSay],
+    [drive, streamSay, celebrate],
   );
 
   const dismissCard = useCallback(

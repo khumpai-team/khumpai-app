@@ -15,7 +15,14 @@ const PAD_X = 20;
 const PAD_TOP = 22;
 const PAD_BOTTOM = 18;
 
-export function InsightCard({ insight }: { insight: Insight }) {
+export function InsightCard({
+  insight,
+  embedded = false,
+}: {
+  insight: Insight;
+  /** True when rendered outside the chat transcript (e.g. Home) — full width, no chat offset. */
+  embedded?: boolean;
+}) {
   const reduce = useReducedMotion();
   const data = insight.chartData;
 
@@ -40,7 +47,7 @@ export function InsightCard({ insight }: { insight: Insight }) {
       initial={{ opacity: 0, y: 18, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.32, ease: [0.34, 1.56, 0.64, 1] }}
-      className="ml-10 w-[88%] max-w-[340px] overflow-hidden rounded-lg border border-border bg-bg-surface shadow-soft-lg"
+      className={`${embedded ? 'w-full' : 'ml-10 w-[88%] max-w-[340px]'} overflow-hidden rounded-lg border border-border bg-bg-surface shadow-soft-lg`}
     >
       <div className="border-b border-border bg-[color:var(--deep-blue-tint)] px-4 py-3">
         <p className="font-serif text-[15px] font-bold leading-tight text-deep-blue">

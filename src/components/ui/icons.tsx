@@ -121,6 +121,13 @@ export const SlidersIcon = (p: IconProps) => (
   </svg>
 );
 
+export const LogoutIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+    <path d="M10 12h10M17 9l3 3-3 3" />
+  </svg>
+);
+
 export const AlertIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 4.5 21 19.5H3L12 4.5Z" />

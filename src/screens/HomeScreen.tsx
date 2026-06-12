@@ -14,6 +14,8 @@ import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 import { Pillbox } from '@/components/pillbox/Pillbox';
 import { CaregiverDashboard } from '@/screens/CaregiverDashboard';
 import { GearIcon, ChatBubbleIcon } from '@/components/ui/icons';
+import { runPatternDetection } from '@/agent/tools';
+import { InsightCard } from '@/components/cards/InsightCard';
 import type { SleepLog } from '@/types';
 
 /** Inicio routes to the patient home or the caregiver dashboard by front. */
@@ -42,6 +44,8 @@ function PatientHome() {
   const user = useAppStore((s) => s.user);
   const logs = useAppStore((s) => s.logs);
   const medications = useAppStore((s) => s.medications);
+  const achievements = useAppStore((s) => s.achievements);
+  const currentPersonId = useAppStore((s) => s.currentPersonId);
 
   const med = medications[0];
   const today = dateKey(new Date().toISOString());
@@ -68,6 +72,12 @@ function PatientHome() {
     );
     return days.size;
   }, [logs]);
+
+  // A pattern from the user's OWN data (honest about sample size; null when sparse).
+  const insight = useMemo(
+    () => runPatternDetection(logs, currentPersonId),
+    [logs, currentPersonId],
+  );
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-bg-base no-scrollbar">
@@ -108,6 +118,33 @@ function PatientHome() {
             {weekDays > 0 ? es.home.weekCount(weekDays) : es.home.weekZero}
           </p>
         </section>
+
+        {/* what Khumpi is noticing — from the user's own data */}
+        {insight && (
+          <section>
+            <p className="eyebrow text-deep-blue">{es.home.insightsTitle}</p>
+            <div className="mt-2">
+              <InsightCard insight={insight} embedded />
+            </div>
+          </section>
+        )}
+
+        {/* celebration-only achievements (never streaks / missed days) */}
+        {achievements.length > 0 && (
+          <section className="rounded-lg border border-border bg-bg-surface p-4">
+            <p className="eyebrow text-text-secondary">{es.home.achievementsTitle}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {achievements.map((a) => (
+                <span
+                  key={a.id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-bg-sunken px-3 py-1.5 text-[13px] font-semibold text-text-primary"
+                >
+                  <span aria-hidden>🏅</span> {a.title}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* big CTA */}
         <button
