@@ -182,6 +182,52 @@ export const es = {
     languageSoon: 'Más idiomas pronto',
   },
 
+  welcome: {
+    tagline: 'Tu compañero, con o sin señal',
+    cta: 'Conocer a Khumpi',
+  },
+
+  login: {
+    title: 'Ingresa tu número',
+    subtitle: 'Te enviamos un código para entrar. Es solo para la demo.',
+    phoneLabel: 'Número de celular',
+    phonePlaceholder: '9XX XXX XXX',
+    sendCode: 'Enviar código',
+    otpLabel: 'Código de 4 dígitos',
+    otpHint: 'Para la demo, escribe cualquier número de 4 dígitos.',
+    verify: 'Entrar',
+  },
+
+  onboarding: {
+    askName: '¡Hola! Soy Khumpi, tu compañera para cuidar tu azúcar 💚 ¿Cómo te llamas?',
+    namePlaceholder: 'Tu nombre',
+    askMode: (name: string) => `Mucho gusto, ${name}. ¿Para quién vamos a cuidar el azúcar?`,
+    modeSelf: 'Para mí — tengo diabetes',
+    modeFamily: 'Para un familiar',
+    askPatientName: '¿Cómo se llama tu familiar?',
+    patientPlaceholder: 'Nombre de tu familiar',
+    askContact:
+      '¿A quién aviso si alguna vez hay una emergencia? Escríbeme su nombre y su número.',
+    contactPlaceholder: 'Ej: Mi hija María, 999 888 777',
+    contactTitle: 'Contacto de emergencia',
+    askMed: '¿Tomas alguna pastilla para el azúcar? Cuéntame cuál y a qué hora.',
+    medPlaceholder: 'Ej: Metformina 850mg, 8am y 8pm',
+    medTitle: 'Tu pastilla',
+    askAppt: 'Una última cosa: ¿tienes una próxima cita con tu doctor?',
+    apptYes: 'Sí, agendarla',
+    apptSkip: 'Todavía no',
+    apptSavedReply: '¡Anotado! Te la voy a recordar. 📅',
+    skip: 'Ahora no',
+    closing:
+      'Listo 💚 No tienes que llenar nada más. Cuéntame las cosas con tus palabras y yo las anoto por ti.',
+    start: 'Empezar a conversar',
+    fieldName: 'Nombre',
+    fieldPhone: 'Teléfono',
+    fieldDose: 'Dosis',
+    fieldSchedule: 'Horario',
+    send: 'Enviar',
+  },
+
   report: {
     title: 'Reporte',
     open: 'Ver reporte',
