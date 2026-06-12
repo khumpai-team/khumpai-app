@@ -6,6 +6,7 @@
 
 import { Outlet } from 'react-router-dom';
 import { BottomNav } from '@/components/ui/BottomNav';
+import { PanicButton } from '@/components/ui/PanicButton';
 
 export function AppLayout() {
   return (
@@ -14,6 +15,7 @@ export function AppLayout() {
         <main className="relative flex-1 overflow-hidden">
           <Outlet />
         </main>
+        <PanicButton />
         <BottomNav />
       </div>
     </div>
