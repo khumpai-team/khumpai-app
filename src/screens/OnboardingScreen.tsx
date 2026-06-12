@@ -85,12 +85,15 @@ export function OnboardingScreen() {
   const [med, setMed] = useState<MedDraft | null>(null);
   const [apptDate, setApptDate] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const started = useRef(false);
 
   const say = (text: string) => setMessages((m) => [...m, { id: uid('o'), role: 'khumpi', text }]);
   const me = (text: string) => setMessages((m) => [...m, { id: uid('o'), role: 'user', text }]);
 
-  // Kick off.
+  // Kick off once — ref guard avoids the StrictMode double-mount duplicate.
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
     say(es.onboarding.askName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
