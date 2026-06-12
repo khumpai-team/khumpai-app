@@ -185,6 +185,25 @@ export const es = {
   journal: {
     title: 'Mi diario',
     placeholder: 'Aquí verás todo lo que vamos anotando juntos.',
+    empty: 'Este día no me contaste nada — y no pasa nada. 💚',
+    sections: {
+      morning: 'Mañana',
+      glucose: 'Glucosa',
+      meals: 'Comidas',
+      medication: 'Medicación',
+      notes: 'Notas de Khumpi',
+    },
+    sleepLabel: (h: number) => `Dormiste ${h} h`,
+    moodLabel: 'Ánimo',
+    stressLabel: 'Estrés',
+    taken: 'Tomada',
+    pending: 'Pendiente',
+    edit: 'Editar',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    today: 'Hoy',
+    yesterday: 'Ayer',
+    weekdayInitials: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
   },
 
   common: {

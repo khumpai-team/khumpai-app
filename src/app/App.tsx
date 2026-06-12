@@ -4,13 +4,12 @@
  */
 
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { es } from '@/data/i18n/es';
 import { ThemeProvider } from '@/app/ThemeProvider';
 import { AppLayout } from '@/app/AppLayout';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
+import { JournalScreen } from '@/screens/JournalScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
-import { PlaceholderScreen } from '@/screens/PlaceholderScreen';
 
 export function App() {
   return (
@@ -21,10 +20,7 @@ export function App() {
           <Route path="/chat" element={<ChatScreen />} />
           <Route path="/home" element={<HomeScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
-          <Route
-            path="/journal"
-            element={<PlaceholderScreen title={es.journal.title} message={es.journal.placeholder} avatar="calm" />}
-          />
+          <Route path="/journal" element={<JournalScreen />} />
         </Route>
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
