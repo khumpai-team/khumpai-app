@@ -10,20 +10,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
-import { MicIcon, SendIcon } from '@/components/ui/icons';
+import { MicIcon, SendIcon, PlusIcon } from '@/components/ui/icons';
 
 const DICTATION_SAMPLE = 'hoy desayuné dos panes con palta y me salió 160';
 
 export function ChatInput({
   onSend,
   onListeningChange,
+  onAttach,
 }: {
   onSend: (text: string) => void;
   onListeningChange?: (listening: boolean) => void;
+  onAttach?: (file: File) => void;
 }) {
   const [text, setText] = useState('');
   const [listening, setListening] = useState(false);
   const timer = useRef<number | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
   useEffect(() => { onListeningChange?.(listening); }, [listening, onListeningChange]);
@@ -52,6 +55,29 @@ export function ChatInput({
 
   return (
     <div className="flex items-end gap-2 border-t border-border bg-bg-surface px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
+      {onAttach && (
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onAttach(f);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            aria-label={es.chat.attachLabel}
+            className="press touch-target grid h-12 w-12 shrink-0 place-items-center rounded-full border border-border bg-bg-base text-text-secondary transition-colors active:bg-bg-sunken"
+          >
+            <PlusIcon size={22} />
+          </button>
+        </>
+      )}
       <div className="flex flex-1 items-center rounded-[22px] border border-border bg-bg-base px-4 shadow-[inset_0_1px_2px_rgba(15,36,41,0.04)] transition-colors focus-within:border-border-strong">
         <input
           value={text}

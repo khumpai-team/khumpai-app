@@ -19,6 +19,7 @@ import {
   type DraftEntries,
 } from '@/agent/tools';
 import { recordSuggestion } from '@/lib/prefs';
+import { readAttachment } from '@/lib/image';
 import { evaluateOfflineRules } from '@/lib/offlineRules';
 import { evaluateAchievements } from '@/lib/achievements';
 import { uid } from '@/lib/id';
@@ -336,14 +337,22 @@ export function useChat() {
 
   // --- Caregiver: register an entry for a chosen patient -----------------
 
-  const registerForPerson = useCallback((intent: DataIntent, person: Person) => {
-    const draft = buildDraftEntries(intent, person.id);
+  // Build a confirmation card locally (no agent) and remember its ack so
+  // confirm streams the right reply. Shared by caregiver logging + attachments.
+  const presentLocalCard = useCallback((draft: DraftEntries) => {
     const ack = localAck(draft);
     const callId = uid('call');
     localAckRef.current.set(callId, ack);
     const args: RegisterEntryArgs = { entry: draft.primary, secondaryEntry: draft.secondary, ack };
-    useChatStore.getState().addCard({ id: callId, kind: 'card', args, state: 'pending' });
+    const chat = useChatStore.getState();
+    chat.setThinking(false);
+    chat.addCard({ id: callId, kind: 'card', args, state: 'pending' });
   }, []);
+
+  const registerForPerson = useCallback(
+    (intent: DataIntent, person: Person) => presentLocalCard(buildDraftEntries(intent, person.id)),
+    [presentLocalCard],
+  );
 
   const pickPerson = useCallback(
     async (itemId: string, person: { id: string; name: string; color: string }) => {
@@ -360,6 +369,34 @@ export function useChat() {
       registerForPerson(pending.intent, full);
     },
     [registerForPerson],
+  );
+
+  // --- Attachments: photo (mock OCR / vision) + files --------------------
+
+  const sendAttachment = useCallback(
+    async (file: File) => {
+      const chat = useChatStore.getState();
+      const app = useAppStore.getState();
+      const { url, isImage, name } = await readAttachment(file);
+
+      if (!isImage) {
+        chat.addMessage({ id: uid('msg'), kind: 'message', role: 'user', text: `📎 ${name}` });
+        chat.setThinking(true);
+        await sleep(700);
+        await streamSay(es.chat.attachFile(name));
+        return;
+      }
+
+      chat.addMessage({ id: uid('msg'), kind: 'message', role: 'user', text: '', imageUrl: url ?? undefined });
+      chat.setThinking(true);
+      await sleep(1200); // "reading" the photo
+      // Mock OCR / vision: read a glucometer value from the photo.
+      const value = 95 + Math.floor(Math.random() * 110);
+      const moment: GlucoseMoment = new Date().getHours() < 11 ? 'ayunas' : 'post-almuerzo';
+      await streamSay(es.chat.attachImageReading(value));
+      presentLocalCard(buildDraftEntries({ kind: 'glucose', value, moment }, app.currentPersonId));
+    },
+    [streamSay, presentLocalCard],
   );
 
   // --- Main entry --------------------------------------------------------
@@ -526,5 +563,6 @@ export function useChat() {
     resolveAction,
     saveCheckin,
     pickPerson,
+    sendAttachment,
   };
 }

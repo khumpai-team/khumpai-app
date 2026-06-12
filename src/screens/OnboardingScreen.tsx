@@ -16,9 +16,10 @@ import { useAppStore } from '@/store/appStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 import { MessageBubble } from '@/components/chat/MessageBubble';
-import { CheckIcon, EditIcon, SendIcon } from '@/components/ui/icons';
+import { readAttachment } from '@/lib/image';
+import { CheckIcon, EditIcon, SendIcon, PlusIcon } from '@/components/ui/icons';
 
-type Msg = { id: string; role: 'khumpi' | 'user'; text: string };
+type Msg = { id: string; role: 'khumpi' | 'user'; text: string; imageUrl?: string };
 type Step =
   | 'name'
   | 'mode'
@@ -86,9 +87,19 @@ export function OnboardingScreen() {
   const [apptDate, setApptDate] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const say = (text: string) => setMessages((m) => [...m, { id: uid('o'), role: 'khumpi', text }]);
   const me = (text: string) => setMessages((m) => [...m, { id: uid('o'), role: 'user', text }]);
+
+  const attach = async (file: File) => {
+    const { url, isImage, name } = await readAttachment(file);
+    setMessages((m) => [
+      ...m,
+      { id: uid('o'), role: 'user', text: isImage ? '' : `📎 ${name}`, imageUrl: isImage ? (url ?? undefined) : undefined },
+    ]);
+    say(es.onboarding.attachAck);
+  };
 
   // Kick off once — ref guard avoids the StrictMode double-mount duplicate.
   useEffect(() => {
@@ -210,7 +221,7 @@ export function OnboardingScreen() {
 
       <div ref={scrollRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.map((m) => (
-          <MessageBubble key={m.id} role={m.role} text={m.text} />
+          <MessageBubble key={m.id} role={m.role} text={m.text} imageUrl={m.imageUrl} />
         ))}
 
         {step === 'contactConfirm' && contact && (
@@ -247,6 +258,25 @@ export function OnboardingScreen() {
         {(step === 'name' || step === 'patientName' || step === 'contact' || step === 'med') && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) attach(f);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                aria-label={es.chat.attachLabel}
+                className="press touch-target grid h-12 w-12 shrink-0 place-items-center rounded-full border border-border bg-bg-base text-text-secondary active:bg-bg-sunken"
+              >
+                <PlusIcon size={22} />
+              </button>
               <div className="flex flex-1 items-center rounded-full border border-border bg-bg-base px-2">
                 <input
                   className={inputCls}

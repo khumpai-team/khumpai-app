@@ -44,6 +44,7 @@ export function ChatScreen() {
     resolveAction,
     saveCheckin,
     pickPerson,
+    sendAttachment,
   } = useChat();
   const [listening, setListening] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
@@ -190,7 +191,7 @@ export function ChatScreen() {
           {items.map((it) => {
             switch (it.kind) {
               case 'message':
-                return <MessageBubble key={it.id} role={it.role} text={it.text} streaming={it.streaming} pending={it.pending} />;
+                return <MessageBubble key={it.id} role={it.role} text={it.text} streaming={it.streaming} pending={it.pending} imageUrl={it.imageUrl} />;
               case 'card':
                 return (
                   <ConfirmationCard
@@ -280,7 +281,7 @@ export function ChatScreen() {
       </div>
 
       {/* composer */}
-      <ChatInput onSend={sendUserMessage} onListeningChange={setListening} />
+      <ChatInput onSend={sendUserMessage} onListeningChange={setListening} onAttach={sendAttachment} />
 
       {/* morning check-in */}
       <AnimatePresence>

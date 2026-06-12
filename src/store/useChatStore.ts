@@ -20,6 +20,8 @@ export interface MessageItem {
   streaming?: boolean;
   /** True when captured offline and waiting to sync (amber pending dot). */
   pending?: boolean;
+  /** Thumbnail data URL when the user attached a photo. */
+  imageUrl?: string;
 }
 
 export interface CardItem {

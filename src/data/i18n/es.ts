@@ -29,7 +29,11 @@ export const es = {
     micLabel: 'Hablar con Khumpi',
     micStop: 'Dejar de grabar',
     sendLabel: 'Enviar mensaje',
-    attachLabel: 'Adjuntar',
+    attachLabel: 'Adjuntar foto o archivo',
+    analyzing: 'Mirando tu foto…',
+    attachImageReading: (v: number) =>
+      `Miré tu foto 📷 — parece tu glucómetro marcando ${v} mg/dL. ¿Lo anoto?`,
+    attachFile: (name: string) => `Recibí “${name}” y lo dejé guardado para tu doctor. 📎`,
     greeting: '¡Hola, Carlos! 👋 ¿Cómo amaneciste hoy?',
     suggestionsTitle: 'Puedes contarme cosas como:',
     suggestions: [
@@ -318,6 +322,7 @@ export const es = {
     fieldDose: 'Dosis',
     fieldSchedule: 'Horario',
     send: 'Enviar',
+    attachAck: '¡Gracias por la foto! La guardé. 📷',
   },
 
   report: {
