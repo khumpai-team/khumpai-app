@@ -5,10 +5,39 @@ business logic, data, store, tests) and the **UI** layer (components, screens, a
 It lists every public interface the core exposes, how to consume it, and what
 remains for Phase 2.
 
-> **Status:** Technical core is complete and verified. `npx tsc --noEmit` is green
-> project-wide and `npm test` (Vitest) passes **130/130 tests**, including the
-> 25+ case guardrail golden set (100% of dangerous messages blocked, 0% false
-> positives on normal messages) and the sleep↔glucose insight demo.
+> **Status:** Technical core complete and verified. `npx tsc --noEmit` green
+> project-wide; front-end suite **155 tests**, server suite **9 tests**, including the
+> 25+ case guardrail golden set (100% blocked / 0% false positive) and the
+> sleep↔glucose insight demo. Durable persistence is implemented (see next section).
+
+---
+
+## ⚡ Backend & Persistence (branch `feat/backend-persistence`)
+
+Persistence is now durable via an **Express + Postgres** backend in `server/`. The
+Zustand store bootstraps from `GET /api/state` and write-throughs every mutation
+(`src/store/appStore.ts` + `src/lib/api/client.ts`); the Azure OpenAI proxy moved
+from the dev-only Vite middleware into the server (`POST /api/agent/chat`).
+
+### Run the full stack (dev)
+1. Start Postgres once: `docker compose up -d` (publishes on host **5433**).
+2. Server: `cd server && npm install && npm run db:migrate && npm run db:seed && npm run dev` (listens on :8787).
+3. Front-end: `npm run dev` — Vite proxies `/api` → `http://localhost:8787`.
+
+The store hydrates from the server on load and falls back to seed/cache if the API
+is down. `npm test` (root) = front-end suite (155); `cd server && npm test` = API suite (9).
+
+### Server env (`server/.env`, gitignored — separate from the front-end `.env`)
+`DATABASE_URL` (preset to 5433), `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`,
+`AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`. Put the Azure key **here** to
+use the live model agent — the front-end `.env` no longer needs Azure keys.
+
+### Notes
+- `VITE_AGENT_PROVIDER=foundry` selects the Foundry provider; it now calls
+  `/api/agent/chat` (the server), not the old dev middleware.
+- Gap: `upsertMedication` has no server endpoint yet (rare; local-only for now).
+- Local-dev DB uses host **5433** (native Postgres owns 5432) + `trust` auth — see
+  `docker-compose.yml`.
 
 ---
 
