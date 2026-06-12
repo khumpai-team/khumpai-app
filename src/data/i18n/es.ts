@@ -144,7 +144,42 @@ export const es = {
 
   home: {
     title: 'Inicio',
-    placeholder: 'Tu resumen del día aparecerá aquí pronto.',
+    greetMorning: (name: string) => `Buenos días, ${name} 💚`,
+    greetAfternoon: (name: string) => `Buenas tardes, ${name} 💚`,
+    greetEvening: (name: string) => `Buenas noches, ${name} 💚`,
+    nextDoseLine: (med: string, time: string) => `Hoy: tu ${med} a las ${time}.`,
+    sleptLittle: 'Anoche dormiste poco — hoy vamos suave, sin apuro.',
+    restedWell: 'Anoche descansaste bien. ¡Sigue así! 🌙',
+    pillTitle: 'Tu pastillero',
+    nextTake: (time: string) => `Próxima toma: ${time}`,
+    markTaken: 'Marcar como tomada',
+    takenToday: 'Tomada hoy ✓',
+    allDone: 'Hoy ya estás al día 💚',
+    weekTitle: 'Tu semana',
+    weekCount: (n: number) =>
+      `Esta semana me contaste ${n} ${n === 1 ? 'día' : 'días'}. ¡Eso ayuda un montón! 🌱`,
+    weekZero: 'Cuéntame algo cuando quieras — sin apuro. Aquí estoy. 🌱',
+    cta: 'Hablar con Khumpi',
+  },
+
+  settings: {
+    title: 'Ajustes',
+    appearance: 'Apariencia',
+    theme: 'Tema',
+    light: 'Claro',
+    dark: 'Oscuro',
+    emergency: 'Contacto de emergencia',
+    emergencyName: 'Nombre',
+    emergencyPhone: 'Teléfono',
+    emergencyRelation: 'Parentesco',
+    save: 'Guardar',
+    saved: 'Guardado ✓',
+    connection: 'Conexión',
+    offlineDemo: 'Modo sin conexión (demo)',
+    offlineHint: 'Simula estar sin señal para ver cómo Khumpi sigue ayudando.',
+    language: 'Idioma',
+    languageValue: 'Español (Perú)',
+    languageSoon: 'Más idiomas pronto',
   },
 
   journal: {

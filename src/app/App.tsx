@@ -8,6 +8,8 @@ import { es } from '@/data/i18n/es';
 import { ThemeProvider } from '@/app/ThemeProvider';
 import { AppLayout } from '@/app/AppLayout';
 import { ChatScreen } from '@/screens/ChatScreen';
+import { HomeScreen } from '@/screens/HomeScreen';
+import { SettingsScreen } from '@/screens/SettingsScreen';
 import { PlaceholderScreen } from '@/screens/PlaceholderScreen';
 
 export function App() {
@@ -17,10 +19,8 @@ export function App() {
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/chat" replace />} />
           <Route path="/chat" element={<ChatScreen />} />
-          <Route
-            path="/home"
-            element={<PlaceholderScreen title={es.home.title} message={es.home.placeholder} avatar="informed" />}
-          />
+          <Route path="/home" element={<HomeScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
           <Route
             path="/journal"
             element={<PlaceholderScreen title={es.journal.title} message={es.journal.placeholder} avatar="calm" />}
