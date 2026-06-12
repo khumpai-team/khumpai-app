@@ -42,19 +42,25 @@ export function KhumpiAvatar({ state = 'happy', size = 96, idle = true, head = f
   const reduce = useReducedMotion();
   const live = idle && !reduce && !head;
 
-  // Head-and-shoulders crop: zoom in and clip to a circle. Static so the head
-  // stays framed inside the clip.
+  // Head-and-shoulders crop: zoom in and clip to a circle. `maxWidth:none` is
+  // required to defeat Tailwind preflight's `img{max-width:100%}`, which would
+  // otherwise clamp the zoom and show the whole body. A gentle breathing keeps
+  // him alive without drifting out of the clip.
   if (head) {
+    const breathe = idle && !reduce;
     return (
       <div
         className={className}
         style={{ position: 'relative', width: size, height: size, overflow: 'hidden', borderRadius: '9999px' }}
       >
-        <img
+        <motion.img
           src={SRC[state]}
           alt={title}
           draggable={false}
-          style={{ position: 'absolute', width: size * 2.4, height: 'auto', left: '50%', top: size * -0.08, transform: 'translateX(-50%)' }}
+          style={{ position: 'absolute', width: size * 2.4, maxWidth: 'none', height: 'auto', left: '50%', top: size * -0.08, transformOrigin: 'center' }}
+          initial={{ x: '-50%' }}
+          animate={breathe ? { x: '-50%', scale: [1, 1.045, 1] } : { x: '-50%' }}
+          transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
     );

@@ -133,8 +133,8 @@ export function ChatScreen() {
         style={{ background: 'linear-gradient(180deg, var(--cyan-tint), var(--bg-surface) 70%)' }}
       >
         <div className="relative shrink-0">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-bg-surface shadow-soft ring-1 ring-[color:var(--border)]">
-            <KhumpiAvatar state={headerState} size={50} />
+          <span className="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-bg-surface shadow-soft ring-1 ring-[color:var(--border)]">
+            <KhumpiAvatar state={headerState} size={56} head />
           </span>
           {/* online presence dot */}
           <span
