@@ -311,7 +311,16 @@ export function useChat() {
 
       // Triage: an urgent/emergency symptom opens the SafetyCard.
       if (intent.kind === 'symptom') {
-        const { level, message } = evaluateRedFlag(intent.description);
+        let { level, message } = evaluateRedFlag(intent.description);
+        // Safety net: a wound that won't close/heal is urgent even when phrased
+        // loosely (e.g. "una herida en el pie que no cierra"). Err toward help.
+        const woundNotHealing =
+          /herida|llaga|[uú]lcera/i.test(intent.description) &&
+          /no\s+(cierra|sana|cicatriz|mejora)/i.test(intent.description);
+        if (woundNotHealing && level !== 'emergency') {
+          level = 'urgent';
+          message = AGENT_ES.redFlags.urgent(intent.description);
+        }
         if (level === 'urgent' || level === 'emergency') {
           await runSafety(level, intent.description, message);
           return;
@@ -320,10 +329,19 @@ export function useChat() {
 
       chat.setThinking(true);
 
-      // Guardrail questions also leave a note/question for the doctor.
-      if (intent.kind === 'guardrail' && intent.reason !== 'injection') {
-        const { doctorNote } = guardrailRedirect(intent.reason, app.currentPersonId);
+      // Guardrails: refuse dose/diagnosis safely and leave a doctor question.
+      // Also catch dose questions the parser missed (e.g. "doble metformina").
+      const doseSafetyNet =
+        intent.kind === 'unknown' &&
+        /(doble|m[aá]s|otra|aument|subir|baj|cambi|cu[aá]nt|puedo|debo)/i.test(trimmed) &&
+        /(metformina|pastilla|dosis|insulina|medic)/i.test(trimmed);
+      if (intent.kind === 'guardrail' || doseSafetyNet) {
+        const reason = intent.kind === 'guardrail' ? intent.reason : 'dose';
+        await sleep(500);
+        const { message, doctorNote } = guardrailRedirect(reason, app.currentPersonId);
         if (doctorNote) app.actions.addDoctorNote(doctorNote);
+        await streamSay(message);
+        return;
       }
 
       const history: AgentInput['history'] = useChatStore
