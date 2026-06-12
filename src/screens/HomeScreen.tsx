@@ -1,7 +1,8 @@
 /**
- * HomeScreen — deliberately NOT a dashboard. A warm greeting, one gentle pill
- * reminder, a compassionate "your week" note (count of days you shared —
- * never missed days, never streaks), and a big invitation to talk to Khumpi.
+ * HomeScreen — deliberately NOT a dashboard. A warm greeting, the visual
+ * pastillero (pill organizer + reminders), a compassionate "your week" note
+ * (days you shared — never missed days, never streaks), and a big invitation
+ * to talk to Khumpi.
  */
 
 import { useMemo } from 'react';
@@ -10,7 +11,8 @@ import { es } from '@/data/i18n/es';
 import { dateKey } from '@/lib/dateUtils';
 import { useAppStore } from '@/store/appStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
-import { GearIcon, PillIcon, CheckIcon, ChatBubbleIcon } from '@/components/ui/icons';
+import { Pillbox } from '@/components/pillbox/Pillbox';
+import { GearIcon, ChatBubbleIcon } from '@/components/ui/icons';
 import type { SleepLog } from '@/types';
 
 /** "20:00" → "8:00 pm". */
@@ -33,20 +35,19 @@ export function HomeScreen() {
   const user = useAppStore((s) => s.user);
   const logs = useAppStore((s) => s.logs);
   const medications = useAppStore((s) => s.medications);
-  const actions = useAppStore((s) => s.actions);
 
   const med = medications[0];
   const today = dateKey(new Date().toISOString());
 
-  const doses = useMemo(
-    () =>
-      med?.schedule.map((time) => {
-        const rec = med.adherenceLog.find((r) => r.date === today && r.scheduledTime === time);
-        return { time, taken: !!rec?.taken };
-      }) ?? [],
-    [med, today],
-  );
-  const nextPending = doses.find((d) => !d.taken);
+  const nextPending = useMemo(() => {
+    if (!med) return undefined;
+    return med.schedule
+      .map((time) => ({
+        time,
+        taken: !!med.adherenceLog.find((r) => r.date === today && r.scheduledTime === time)?.taken,
+      }))
+      .find((d) => !d.taken);
+  }, [med, today]);
 
   const lastSleep = useMemo(() => {
     const sleeps = logs.filter((l): l is SleepLog => l.type === 'sleep');
@@ -60,11 +61,6 @@ export function HomeScreen() {
     );
     return days.size;
   }, [logs]);
-
-  const confirmDose = () => {
-    if (!med || !nextPending) return;
-    actions.logMedicationTaken(med.id, { date: today, scheduledTime: nextPending.time, taken: true });
-  };
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-bg-base no-scrollbar">
@@ -95,51 +91,12 @@ export function HomeScreen() {
       </header>
 
       <div className="flex flex-col gap-4 px-5 pb-6 pt-3">
-        {/* pill reminder */}
-        {med && (
-          <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
-            <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[color:var(--cyan-tint)] text-cyan">
-                <PillIcon size={24} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-                  {es.home.pillTitle}
-                </p>
-                <p className="font-bold text-text-primary">
-                  {med.name} {med.dose}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              {nextPending ? (
-                <>
-                  <span className="text-sm font-semibold text-text-secondary">
-                    {es.home.nextTake(fmtTime(nextPending.time))}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={confirmDose}
-                    className="touch-target rounded-full btn-primary px-4 py-2 text-sm font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
-                  >
-                    {es.home.markTaken}
-                  </button>
-                </>
-              ) : (
-                <span className="flex items-center gap-1.5 text-sm font-bold text-cyan">
-                  <CheckIcon size={17} /> {es.home.allDone}
-                </span>
-              )}
-            </div>
-          </section>
-        )}
+        {/* pastillero */}
+        <Pillbox />
 
         {/* compassionate week */}
         <section className="rounded-lg border border-border bg-[color:var(--sky-tint)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-deep-blue">
-            {es.home.weekTitle}
-          </p>
+          <p className="eyebrow text-deep-blue">{es.home.weekTitle}</p>
           <p className="mt-1 text-[16px] font-semibold leading-relaxed text-text-primary">
             {weekDays > 0 ? es.home.weekCount(weekDays) : es.home.weekZero}
           </p>
@@ -149,7 +106,7 @@ export function HomeScreen() {
         <button
           type="button"
           onClick={() => navigate('/chat')}
-          className="touch-target mt-1 flex items-center justify-center gap-2 rounded-full btn-primary py-4 text-[17px] font-bold text-[color:var(--text-on-brand)] transition-transform active:scale-95"
+          className="press btn-primary touch-target mt-1 flex items-center justify-center gap-2 rounded-full py-4 text-[17px] font-bold"
         >
           <ChatBubbleIcon size={22} /> {es.home.cta}
         </button>

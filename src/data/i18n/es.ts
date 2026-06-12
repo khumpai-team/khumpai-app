@@ -162,6 +162,22 @@ export const es = {
     cta: 'Hablar con Khumpi',
   },
 
+  pillbox: {
+    title: 'Tu pastillero',
+    subtitle: 'Tus pastillas y cuándo tomarlas',
+    today: 'Hoy',
+    stockOf: (n: number, cap: number) => `${n} de ${cap} pastillas`,
+    low: 'Te quedan pocas — repón pronto',
+    out: 'Se acabaron — repón hoy',
+    refill: 'Reponer',
+    refilled: 'Pastillero repuesto ✓',
+    taken: 'Tomada',
+    take: 'Tomar',
+    next: 'Próxima',
+    allTaken: 'Hoy ya tomaste todo 💚',
+    empty: 'Aún no agregaste pastillas. Cuéntame cuáles tomas en el chat. 💬',
+  },
+
   settings: {
     title: 'Ajustes',
     appearance: 'Apariencia',
