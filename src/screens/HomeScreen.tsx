@@ -15,8 +15,7 @@ import { Pillbox } from '@/components/pillbox/Pillbox';
 import { CaregiverDashboard } from '@/screens/CaregiverDashboard';
 import { GearIcon, ChatBubbleIcon } from '@/components/ui/icons';
 import { runPatternDetection } from '@/agent/tools';
-import { InsightCard } from '@/components/cards/InsightCard';
-import { Ring } from '@/components/report/viz';
+import { Ring, Sparkline } from '@/components/report/viz';
 import type { GlucoseLog, SleepLog } from '@/types';
 
 /** Inicio routes to the patient home or the caregiver dashboard by front. */
@@ -90,7 +89,7 @@ function PatientHome() {
     const vals = gs.map((g) => g.payload.value);
     const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
     const pctIn = Math.round((vals.filter((v) => v >= 70 && v <= 180).length / vals.length) * 100);
-    return { avg, pctIn, latest: gs[gs.length - 1].payload.value };
+    return { avg, pctIn, latest: gs[gs.length - 1].payload.value, points: vals };
   }, [logs]);
 
   return (
@@ -146,6 +145,10 @@ function PatientHome() {
                 </div>
               </div>
             </div>
+            {/* minimal historic trend */}
+            <div className="mt-3">
+              <Sparkline values={glu.points} color={glu.pctIn >= 70 ? 'var(--cyan)' : 'var(--amber)'} />
+            </div>
           </section>
         )}
 
@@ -160,14 +163,17 @@ function PatientHome() {
           </p>
         </section>
 
-        {/* what Khumpi is noticing — from the user's own data */}
+        {/* what Khumpi is noticing — minimal note; full chart lives in the report */}
         {insight && (
-          <section>
-            <p className="eyebrow text-deep-blue">{es.home.insightsTitle}</p>
-            <div className="mt-2">
-              <InsightCard insight={insight} embedded />
-            </div>
-          </section>
+          <button
+            type="button"
+            onClick={() => navigate('/report')}
+            className="press rounded-lg border border-border bg-bg-surface p-4 text-left shadow-soft"
+          >
+            <p className="eyebrow text-deep-blue">🔍 {es.home.insightsTitle}</p>
+            <p className="mt-1 text-[15px] leading-relaxed text-text-primary">{insight.text}</p>
+            <span className="mt-1.5 inline-block text-xs font-bold text-deep-blue">{es.report.open} →</span>
+          </button>
         )}
 
         {/* celebration-only achievements (never streaks / missed days) */}

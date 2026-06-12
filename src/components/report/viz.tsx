@@ -156,6 +156,46 @@ export function TrendChart({ points }: { points: { v: number; spike: boolean }[]
   );
 }
 
+// --- Sparkline: minimal historic trend (no axes, no band) ------------------
+
+export function Sparkline({ values, color = 'var(--cyan)', height = 44 }: { values: number[]; color?: string; height?: number }) {
+  const reduce = useReducedMotion();
+  if (values.length < 2) return null;
+  const w = 300;
+  const pad = 5;
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = Math.max(1, hi - lo);
+  const x = (i: number) => pad + (i * (w - 2 * pad)) / (values.length - 1);
+  const y = (v: number) => pad + (1 - (v - lo) / span) * (height - 2 * pad);
+  const line = values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  const last = values.length - 1;
+
+  return (
+    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" preserveAspectRatio="none" role="img" aria-label="Tendencia reciente">
+      <defs>
+        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`${pad},${height - pad} ${line} ${x(last)},${height - pad}`} fill="url(#spark-fill)" />
+      <motion.polyline
+        points={line}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        initial={{ pathLength: reduce ? 1 : 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.8, ease: 'easeInOut' }}
+      />
+      <circle cx={x(last)} cy={y(values[last])} r="3" fill={color} stroke="var(--bg-surface)" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 // --- MomentBars: average by time-of-day ------------------------------------
 
 export function MomentBars({
