@@ -1,11 +1,15 @@
 /**
  * ReportScreen — two tabs.
  *
- * "Para mi médico": a period-scoped summary (glucose, adherence, observed
- * patterns WITH honesty labels, questions for the doctor) rendered with serif
- * headers for a document-trust feel, plus a share sheet (the doctor never
- * installs anything). "Lo que me dijo el doctor": a timeline of visits and a
- * form to add a new one (Khumpi acknowledges it in chat).
+ * "Para mi médico": a clinical reporting dashboard built around Time-in-Range
+ * (the modern AGP standard) — a control hero with an in-range ring, a stacked
+ * low/in/high bar, a glucose trend chart with the target band, per-moment
+ * averages, adherence, observed patterns (with honesty labels) and questions
+ * for the doctor. Serif headers for document trust; a share sheet at the end.
+ * "Lo que me dijo el doctor": a visits timeline + add-visit form.
+ *
+ * All viz is hand-built SVG (see components/report/viz). Scoped to the current
+ * patient (currentPersonId) so it works for both fronts.
  */
 
 import { useMemo, useState } from 'react';
@@ -17,29 +21,32 @@ import { evaluateAchievements } from '@/lib/achievements';
 import { uid } from '@/lib/id';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
-import type { GlucoseLog } from '@/types';
-import {
-  ChevronLeftIcon,
-  ShareIcon,
-  PlusIcon,
-  CheckIcon,
-  ChatBubbleIcon,
-} from '@/components/ui/icons';
+import type { GlucoseLog, GlucoseMoment } from '@/types';
+import { Ring, RangeBar, TrendChart, MomentBars } from '@/components/report/viz';
+import { ChevronLeftIcon, ShareIcon, PlusIcon, CheckIcon, ChatBubbleIcon } from '@/components/ui/icons';
 
 type Tab = 'doctor' | 'visits';
-type Period = 15 | 30;
+type Period = 7 | 30 | 90;
+type MomentStatus = 'low' | 'in' | 'high';
+
+const DAY = 24 * 60 * 60 * 1000;
+const MOMENTS: GlucoseMoment[] = ['ayunas', 'post-desayuno', 'post-almuerzo', 'post-cena'];
 
 const fmtDay = (dateStr: string) => {
   const d = new Date(dateStr.length <= 10 ? `${dateStr}T12:00:00` : dateStr);
-  const s = new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
-  return s;
+  return new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
 };
+const fmtShort = (d: Date) => new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short' }).format(d);
 
 const fieldCls =
   'w-full rounded-md border border-border bg-bg-base px-3 py-2.5 text-[16px] text-text-primary focus-visible:outline-cyan';
 
-function SerifHeader({ children }: { children: React.ReactNode }) {
-  return <h2 className="font-serif text-lg font-bold text-deep-blue">{children}</h2>;
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <section className={`rounded-lg border border-border bg-bg-surface p-4 shadow-soft ${className}`}>{children}</section>;
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="font-serif text-[15px] font-bold text-deep-blue">{children}</h2>;
 }
 
 export function ReportScreen() {
@@ -79,9 +86,7 @@ export function ReportScreen() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
-        {tab === 'doctor' ? <DoctorTab /> : <VisitsTab />}
-      </div>
+      <div className="flex-1 overflow-y-auto no-scrollbar">{tab === 'doctor' ? <DoctorTab /> : <VisitsTab />}</div>
     </div>
   );
 }
@@ -94,28 +99,80 @@ function DoctorTab() {
   const doctorNotes = useAppStore((s) => s.doctorNotes);
   const actions = useAppStore((s) => s.actions);
   const personId = useAppStore((s) => s.currentPersonId);
+  const persons = useAppStore((s) => s.persons);
+  const patientName = persons.find((p) => p.id === personId)?.name ?? '';
 
-  const [period, setPeriod] = useState<Period>(15);
+  const [period, setPeriod] = useState<Period>(7);
   const [adding, setAdding] = useState(false);
   const [questionText, setQuestionText] = useState('');
   const [showShare, setShowShare] = useState(false);
   const [sent, setSent] = useState(false);
   const [unlocked, setUnlocked] = useState<string | null>(null);
 
-  const summary = useMemo(() => {
-    const cutoff = Date.now() - period * 24 * 60 * 60 * 1000;
-    const gl = logs.filter((l): l is GlucoseLog => l.type === 'glucose' && new Date(l.timestamp).getTime() >= cutoff);
-    const values = gl.map((g) => g.payload.value);
-    const avg = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
-    const inRange = values.filter((v) => v >= 70 && v <= 180).length;
-    const spikes = gl.filter((g) => g.payload.value >= 180).sort((a, b) => b.payload.value - a.payload.value);
+  const s = useMemo(() => {
+    const now = Date.now();
+    const curFrom = now - period * DAY;
+    const prevFrom = now - 2 * period * DAY;
+    const glu = logs
+      .filter((l): l is GlucoseLog => l.type === 'glucose' && l.personId === personId)
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    const t = (g: GlucoseLog) => new Date(g.timestamp).getTime();
+    const cur = glu.filter((g) => t(g) >= curFrom);
+    const prev = glu.filter((g) => t(g) >= prevFrom && t(g) < curFrom);
 
-    const recs = medications.flatMap((m) => m.adherenceLog).filter((r) => new Date(`${r.date}T12:00:00`).getTime() >= cutoff);
-    const taken = recs.filter((r) => r.taken).length;
-    const pct = recs.length ? Math.round((taken / recs.length) * 100) : null;
+    const vals = cur.map((g) => g.payload.value);
+    const total = vals.length;
+    const avg = total ? Math.round(vals.reduce((a, b) => a + b, 0) / total) : null;
+    const prevAvg = prev.length ? Math.round(prev.reduce((a, b) => a + b.payload.value, 0) / prev.length) : null;
+    const delta = avg != null && prevAvg != null ? avg - prevAvg : null;
 
-    return { count: values.length, avg, inRange, spikes, taken, totalDoses: recs.length, pct };
-  }, [logs, medications, period]);
+    const low = vals.filter((v) => v < 70).length;
+    const high = vals.filter((v) => v > 180).length;
+    const inr = total - low - high;
+    const pctLow = total ? Math.round((low / total) * 100) : 0;
+    const pctIn = total ? Math.round((inr / total) * 100) : 0;
+    const pctHigh = total ? Math.max(0, 100 - pctLow - pctIn) : 0;
+
+    const byMoment = MOMENTS.map((m) => {
+      const mv = cur.filter((g) => g.payload.moment === m).map((g) => g.payload.value);
+      const a = mv.length ? Math.round(mv.reduce((x, y) => x + y, 0) / mv.length) : null;
+      const status: MomentStatus = a == null ? 'in' : a > 180 ? 'high' : a < 70 ? 'low' : 'in';
+      return { key: m, label: es.report.momentShort[m], avg: a, status };
+    });
+
+    const recs = medications
+      .filter((m) => m.personId === personId)
+      .flatMap((m) => m.adherenceLog)
+      .filter((r) => new Date(`${r.date}T12:00:00`).getTime() >= curFrom);
+    const takenN = recs.filter((r) => r.taken).length;
+    const adh = recs.length ? Math.round((takenN / recs.length) * 100) : null;
+
+    const trend = cur.map((g) => ({ v: g.payload.value, spike: g.payload.value > 180 }));
+
+    return {
+      total,
+      avg,
+      delta,
+      pctLow,
+      pctIn,
+      pctHigh,
+      byMoment,
+      adh,
+      takenN,
+      totalDoses: recs.length,
+      trend,
+      spikes: high,
+      rangeStr: `${fmtShort(new Date(curFrom))} – ${fmtShort(new Date(now))}`,
+    };
+  }, [logs, medications, personId, period]);
+
+  const control = s.total === 0 ? null : s.pctIn >= 70 ? 'good' : s.avg != null && s.avg <= 180 ? 'moderate' : 'high';
+  const controlMeta =
+    control === 'good'
+      ? { label: es.report.statusGood, color: 'var(--cyan)', tint: 'var(--cyan-tint)' }
+      : control === 'moderate'
+        ? { label: es.report.statusModerate, color: 'var(--deep-blue)', tint: 'var(--deep-blue-tint)' }
+        : { label: es.report.statusHigh, color: 'var(--amber)', tint: 'var(--amber-tint)' };
 
   const patterns = useMemo(() => generateReport(useAppStore.getState()).patterns, [logs]);
   const questions = getDoctorNotes(doctorNotes, { forQuestion: true });
@@ -123,14 +180,7 @@ function DoctorTab() {
   const addQuestion = () => {
     const text = questionText.trim();
     if (!text) return;
-    actions.addDoctorNote({
-      id: uid('dn'),
-      personId,
-      text,
-      timestamp: new Date().toISOString(),
-      source: 'user',
-      forQuestion: true,
-    });
+    actions.addDoctorNote({ id: uid('dn'), personId, text, timestamp: new Date().toISOString(), source: 'user', forQuestion: true });
     setQuestionText('');
     setAdding(false);
   };
@@ -139,7 +189,6 @@ function DoctorTab() {
     setShowShare(false);
     setSent(true);
     window.setTimeout(() => setSent(false), 2200);
-    // Celebrate: a generated report can unlock the "report ready" achievement.
     const newOnes = evaluateAchievements(useAppStore.getState(), undefined, { reportGenerated: true });
     newOnes.forEach((a) => actions.addAchievement(a));
     if (newOnes[0]) {
@@ -149,68 +198,136 @@ function DoctorTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
+    <div className="flex flex-col gap-3.5 px-4 py-4">
+      {/* report meta */}
+      <div>
+        <p className="eyebrow">{es.report.reportFor(patientName)}</p>
+        <p className="text-xs text-text-tertiary">{s.rangeStr}</p>
+      </div>
+
       {/* period selector */}
-      <div className="flex gap-2 rounded-full bg-bg-sunken p-1">
-        {([15, 30] as const).map((p) => (
+      <div className="flex gap-1 rounded-full bg-bg-sunken p-1">
+        {([7, 30, 90] as const).map((p) => (
           <button
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
             aria-pressed={period === p}
-            className="flex-1 rounded-full py-2 text-sm font-bold transition-colors"
+            className="flex-1 rounded-full py-2 text-[13px] font-bold transition-colors"
             style={{
               background: period === p ? 'var(--bg-surface)' : 'transparent',
               color: period === p ? 'var(--cyan)' : 'var(--text-secondary)',
-              boxShadow: period === p ? '0 2px 8px rgba(31,102,153,0.10)' : 'none',
+              boxShadow: period === p ? 'var(--shadow-sm)' : 'none',
             }}
           >
-            {p === 15 ? es.report.period15 : es.report.period30}
+            {p === 7 ? es.report.period7 : p === 30 ? es.report.period30 : es.report.period90}
           </button>
         ))}
       </div>
 
-      {/* glucose */}
-      <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
-        <SerifHeader>📊 {es.report.glucoseTitle}</SerifHeader>
-        {summary.count > 0 ? (
-          <>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <Stat label={es.report.avg} value={`${summary.avg}`} unit={es.confirmation.units.mgdl} />
-              <Stat label={es.report.inRange} value={`${summary.inRange}/${summary.count}`} />
-              <Stat label={es.report.spikes} value={`${summary.spikes.length}`} accent="var(--amber)" />
-            </div>
-            <p className="mt-2 text-xs text-text-tertiary">{es.report.readingsCount(summary.count)}</p>
-          </>
-        ) : (
+      {s.total === 0 ? (
+        <Card>
+          <SectionTitle>{es.report.control}</SectionTitle>
           <p className="mt-2 text-[15px] text-text-secondary">{es.report.noGlucose}</p>
-        )}
-      </section>
+        </Card>
+      ) : (
+        <>
+          {/* HERO — control + time-in-range ring */}
+          <Card className="!p-0 overflow-hidden">
+            <div className="flex items-center gap-4 p-5" style={{ background: `linear-gradient(135deg, ${controlMeta.tint}, transparent 70%)` }}>
+              <div className="min-w-0 flex-1">
+                <p className="eyebrow">{es.report.avgLabel}</p>
+                <p className="font-serif text-[40px] font-bold leading-none text-text-primary">
+                  {s.avg}
+                  <span className="ml-1 text-base font-bold text-text-tertiary">mg/dL</span>
+                </p>
+                <span
+                  className="mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-extrabold"
+                  style={{ background: controlMeta.tint, color: controlMeta.color }}
+                >
+                  {controlMeta.label}
+                </span>
+                {s.delta != null && (
+                  <p
+                    className="mt-1.5 text-[13px] font-bold"
+                    style={{ color: s.delta < 0 ? 'var(--cyan)' : s.delta > 0 ? 'var(--amber)' : 'var(--text-tertiary)' }}
+                  >
+                    {s.delta < 0 ? es.report.deltaBetter(-s.delta) : s.delta > 0 ? es.report.deltaWorse(s.delta) : es.report.deltaSame}
+                  </p>
+                )}
+              </div>
+              <Ring pct={s.pctIn} color={controlMeta.color} size={104} sublabel={es.report.tirIn} />
+            </div>
+          </Card>
 
-      {/* adherence */}
-      <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
-        <SerifHeader>💊 {es.report.adherenceTitle}</SerifHeader>
-        {summary.pct != null ? (
-          <>
-            <p className="mt-2 text-2xl font-extrabold text-cyan">{es.report.adherencePct(summary.pct)}</p>
-            <p className="text-sm text-text-secondary">{es.report.adherenceSub(summary.taken, summary.totalDoses)}</p>
-          </>
-        ) : (
-          <p className="mt-2 text-[15px] text-text-secondary">{es.report.noAdherence}</p>
-        )}
-      </section>
+          {/* TIME IN RANGE */}
+          <Card>
+            <SectionTitle>{es.report.timeInRange}</SectionTitle>
+            <div className="mt-3">
+              <RangeBar low={s.pctLow} inRange={s.pctIn} high={s.pctHigh} />
+              <div className="mt-2.5 flex items-center justify-between text-[12px] font-semibold">
+                {[
+                  { c: 'var(--deep-blue)', l: es.report.tirLow, p: s.pctLow },
+                  { c: 'var(--cyan)', l: es.report.tirIn, p: s.pctIn },
+                  { c: 'var(--amber)', l: es.report.tirHigh, p: s.pctHigh },
+                ].map((seg) => (
+                  <span key={seg.l} className="flex items-center gap-1.5 text-text-secondary">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: seg.c }} />
+                    {seg.l} <span className="font-extrabold text-text-primary">{seg.p}%</span>
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-text-tertiary">{es.report.tirHint}</p>
+            </div>
+          </Card>
 
-      {/* patterns */}
-      <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
-        <SerifHeader>🔍 {es.report.patternsTitle}</SerifHeader>
+          {/* TREND */}
+          <Card>
+            <SectionTitle>{es.report.trend}</SectionTitle>
+            <div className="mt-2">
+              <TrendChart points={s.trend} />
+              <p className="mt-1 text-xs text-text-tertiary">
+                {es.report.readingsCount(s.total)} · {es.report.trendHint}
+              </p>
+            </div>
+          </Card>
+
+          {/* BY MOMENT */}
+          <Card>
+            <SectionTitle>{es.report.byMoment}</SectionTitle>
+            <div className="mt-3">
+              <MomentBars rows={s.byMoment} />
+            </div>
+          </Card>
+
+          {/* ADHERENCE */}
+          <Card>
+            <SectionTitle>{es.report.adherenceTitle}</SectionTitle>
+            {s.adh != null ? (
+              <div className="mt-2 flex items-center gap-4">
+                <Ring pct={s.adh} color="var(--deep-blue)" size={88} />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-text-primary">{es.report.adherencePct(s.adh)}</p>
+                  <p className="text-sm text-text-secondary">{es.report.adherenceSub(s.takenN, s.totalDoses)}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-[15px] text-text-secondary">{es.report.noAdherence}</p>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* PATTERNS */}
+      <Card>
+        <SectionTitle>🔍 {es.report.patternsTitle}</SectionTitle>
         {patterns.length ? (
           <div className="mt-2 flex flex-col gap-3">
             {patterns.map((ins) => (
               <div key={ins.id}>
                 <p className="text-[15px] leading-relaxed text-text-primary">{ins.text}</p>
                 <span className="mt-1 inline-block rounded-full bg-bg-sunken px-2.5 py-1 text-xs font-semibold text-text-secondary">
-                  🔍 {ins.confidence === 'clear' ? es.arc.honestyClear : es.arc.honestyPossible}{' '}
-                  {es.arc.honestyTail(ins.basedOnCount)}
+                  🔍 {ins.confidence === 'clear' ? es.arc.honestyClear : es.arc.honestyPossible} {es.arc.honestyTail(ins.basedOnCount)}
                 </span>
               </div>
             ))}
@@ -219,11 +336,11 @@ function DoctorTab() {
         ) : (
           <p className="mt-2 text-[15px] text-text-secondary">{es.report.noPatterns}</p>
         )}
-      </section>
+      </Card>
 
-      {/* questions */}
-      <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
-        <SerifHeader>❓ {es.report.questionsTitle}</SerifHeader>
+      {/* QUESTIONS */}
+      <Card>
+        <SectionTitle>❓ {es.report.questionsTitle}</SectionTitle>
         <ul className="mt-2 flex flex-col gap-2">
           {questions.length ? (
             questions.map((q) => (
@@ -248,7 +365,7 @@ function DoctorTab() {
               onChange={(e) => setQuestionText(e.target.value)}
             />
             <div className="flex gap-2">
-              <button type="button" onClick={addQuestion} className="rounded-full bg-cyan px-4 py-2 text-sm font-bold text-[color:var(--text-on-brand)]">
+              <button type="button" onClick={addQuestion} className="press btn-primary rounded-full px-4 py-2 text-sm font-bold">
                 {es.report.addQuestion}
               </button>
               <button type="button" onClick={() => setAdding(false)} className="rounded-full border border-border px-4 py-2 text-sm font-bold text-text-secondary">
@@ -257,34 +374,27 @@ function DoctorTab() {
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="mt-3 flex items-center gap-1.5 text-sm font-bold text-deep-blue"
-          >
+          <button type="button" onClick={() => setAdding(true)} className="mt-3 flex items-center gap-1.5 text-sm font-bold text-deep-blue">
             <PlusIcon size={18} /> {es.report.addQuestion}
           </button>
         )}
-      </section>
+      </Card>
 
-      {/* share */}
+      {/* SHARE */}
       <button
         type="button"
         onClick={() => setShowShare(true)}
-        className="touch-target mt-1 flex items-center justify-center gap-2 rounded-full bg-deep-blue py-4 text-[16px] font-bold text-white shadow-soft transition-transform active:scale-95"
+        className="press touch-target mt-1 flex items-center justify-center gap-2 rounded-full py-4 text-[16px] font-bold text-white shadow-soft"
+        style={{ background: 'var(--deep-blue)' }}
       >
         <ShareIcon size={20} /> {es.report.share}
       </button>
 
-      {/* toasts */}
       <AnimatePresence>
-        {sent && (
-          <Toast key="sent" text={es.report.sent} />
-        )}
+        {sent && <Toast key="sent" text={es.report.sent} />}
         {unlocked && <Toast key="ach" text={`🎉 ${unlocked}`} />}
       </AnimatePresence>
 
-      {/* share sheet */}
       <AnimatePresence>
         {showShare && (
           <motion.div
@@ -324,18 +434,6 @@ function DoctorTab() {
   );
 }
 
-function Stat({ label, value, unit, accent }: { label: string; value: string; unit?: string; accent?: string }) {
-  return (
-    <div className="rounded-md bg-bg-sunken px-2 py-3">
-      <p className="text-xl font-extrabold" style={{ color: accent ?? 'var(--text-primary)' }}>
-        {value}
-      </p>
-      {unit && <p className="text-[10px] text-text-tertiary">{unit}</p>}
-      <p className="mt-0.5 text-xs font-semibold text-text-secondary">{label}</p>
-    </div>
-  );
-}
-
 function Toast({ text }: { text: string }) {
   return (
     <motion.div
@@ -371,16 +469,10 @@ function VisitsTab() {
       personId,
       date: new Date().toISOString().slice(0, 10),
       whatDoctorSaid,
-      indications: indications.split('\n').map((s) => s.trim()).filter(Boolean),
+      indications: indications.split('\n').map((x) => x.trim()).filter(Boolean),
       nextAppointment: next || undefined,
     });
-    // Khumpi acknowledges in chat.
-    useChatStore.getState().addMessage({
-      id: uid('msg'),
-      kind: 'message',
-      role: 'khumpi',
-      text: es.report.visitAck(whatDoctorSaid),
-    });
+    useChatStore.getState().addMessage({ id: uid('msg'), kind: 'message', role: 'khumpi', text: es.report.visitAck(whatDoctorSaid) });
     setSaid('');
     setIndications('');
     setNext('');
@@ -390,7 +482,7 @@ function VisitsTab() {
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
       {adding ? (
-        <section className="rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
+        <Card>
           <h2 className="font-serif text-lg font-bold text-deep-blue">{es.report.newVisit}</h2>
           <div className="mt-3 flex flex-col gap-3">
             <label className="text-sm font-semibold text-text-secondary">
@@ -406,7 +498,7 @@ function VisitsTab() {
               <input type="date" className={`${fieldCls} mt-1`} value={next} onChange={(e) => setNext(e.target.value)} />
             </label>
             <div className="flex gap-2">
-              <button type="button" onClick={saveVisit} className="rounded-full bg-cyan px-4 py-2.5 text-sm font-bold text-[color:var(--text-on-brand)]">
+              <button type="button" onClick={saveVisit} className="press btn-primary rounded-full px-4 py-2.5 text-sm font-bold">
                 {es.report.visitSave}
               </button>
               <button type="button" onClick={() => setAdding(false)} className="rounded-full border border-border px-4 py-2.5 text-sm font-bold text-text-secondary">
@@ -414,12 +506,12 @@ function VisitsTab() {
               </button>
             </div>
           </div>
-        </section>
+        </Card>
       ) : (
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="touch-target flex items-center justify-center gap-2 rounded-full border border-border bg-bg-surface py-3.5 text-[15px] font-bold text-deep-blue shadow-soft transition-transform active:scale-95"
+          className="press touch-target flex items-center justify-center gap-2 rounded-full border border-border bg-bg-surface py-3.5 text-[15px] font-bold text-deep-blue shadow-soft"
         >
           <PlusIcon size={20} /> {es.report.newVisit}
         </button>
@@ -428,7 +520,7 @@ function VisitsTab() {
       {sorted.length ? (
         <div className="relative flex flex-col gap-3 pl-4">
           {sorted.map((v) => (
-            <section key={v.id} className="relative rounded-lg border border-border bg-bg-surface p-4 shadow-soft">
+            <Card key={v.id} className="relative">
               <span className="absolute -left-4 top-5 h-3 w-3 rounded-full bg-cyan ring-4 ring-[color:var(--bg-base)]" />
               <p className="font-serif text-sm font-bold text-deep-blue">{fmtDay(v.date)}</p>
               <p className="mt-1 text-[15px] leading-relaxed text-text-primary">{v.whatDoctorSaid}</p>
@@ -447,7 +539,7 @@ function VisitsTab() {
                   <ChatBubbleIcon size={15} /> {es.report.nextAppt(fmtDay(v.nextAppointment))}
                 </p>
               )}
-            </section>
+            </Card>
           ))}
         </div>
       ) : (
