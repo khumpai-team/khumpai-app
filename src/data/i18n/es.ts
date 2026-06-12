@@ -1,0 +1,167 @@
+/**
+ * Single source of truth for ALL user-facing text.
+ * Peruvian Spanish, plain language. We say "tu azúcar", never "glucemia".
+ * Warm and encouraging — never punitive.
+ *
+ * Components must import from here; never hardcode user-facing strings.
+ */
+
+export const es = {
+  app: {
+    name: 'Khumpai',
+    tagline: 'Tu compañera para cuidar tu azúcar',
+  },
+
+  nav: {
+    home: 'Inicio',
+    chat: 'Khumpi',
+    journal: 'Mi diario',
+  },
+
+  chat: {
+    status: 'En línea',
+    statusThinking: 'Escribiendo…',
+    statusListening: 'Te escucho…',
+    headerSubtitle: 'Aquí para ayudarte',
+    inputPlaceholder: 'Cuéntame cómo vas…',
+    micLabel: 'Hablar con Khumpi',
+    micStop: 'Dejar de grabar',
+    sendLabel: 'Enviar mensaje',
+    attachLabel: 'Adjuntar',
+    greeting: '¡Hola, Carlos! 👋 ¿Cómo amaneciste hoy?',
+    suggestionsTitle: 'Puedes contarme cosas como:',
+    suggestions: [
+      'Hoy desayuné dos panes con palta y me salió 160',
+      'Dormí 5 horas',
+      'Ya tomé mi pastilla',
+      'Me duele un poco la cabeza',
+    ],
+  },
+
+  confirmation: {
+    title: 'Anoté esto',
+    titleMeal: 'Tu comida',
+    titleGlucose: 'Tu azúcar',
+    titleSleep: 'Tu descanso',
+    titleMedication: 'Tu pastilla',
+    titleSymptom: 'Cómo te sientes',
+    forPersonPrefix: 'Para',
+    confirm: 'Confirmar',
+    edit: 'Editar',
+    saved: 'Guardado',
+    cancel: 'Cancelar',
+    done: 'Listo',
+    // field labels
+    fieldMeal: 'Comida',
+    fieldPlace: 'Dónde',
+    fieldGlucose: 'Azúcar',
+    fieldGlucoseMoment: 'Cuándo mediste',
+    fieldHours: 'Horas',
+    fieldMedication: 'Medicamento',
+    fieldMedTaken: 'Estado',
+    fieldSymptom: 'Molestia',
+    medTaken: { yes: 'Sí la tomé', no: 'Aún no' },
+    units: {
+      mgdl: 'mg/dL',
+      hours: 'horas',
+    },
+  },
+
+  enums: {
+    mealContext: {
+      casa: 'En casa',
+      fuera: 'Fuera',
+    },
+    glucoseMoment: {
+      ayunas: 'En ayunas',
+      'post-desayuno': 'Después del desayuno',
+      'post-almuerzo': 'Después del almuerzo',
+      'post-cena': 'Después de la cena',
+    },
+  },
+
+  // NOTE: generic agent reflexes live in `agent-es.ts` (AGENT_ES). This file
+  // holds UI chrome AND scripted demo-flow dialogue (the emotional arc, etc.).
+
+  // The spike → calm → why → action arc.
+  arc: {
+    calm: (name: string) =>
+      `Tranquilo, ${name}. Respira hondo. Un número alto no es una emergencia por sí solo — y no es tu culpa. Vamos a entenderlo juntos, ¿ya?`,
+    chipWhy: '¿Por qué me pasó?',
+    chipWhat: '¿Qué hago ahora?',
+    insightHeader: 'Lo que veo en TUS registros',
+    honestyClear: 'Patrón claro',
+    honestyPossible: 'Posible patrón',
+    honestyTail: (n: number) =>
+      `· basado en ${n} coincidencias en tus registros · no es un diagnóstico`,
+    actionActivity:
+      'Una caminata suave de 10 minutos después de almorzar suele ayudar. ¿Te lo recuerdo?',
+    actionFood:
+      'Como lo tuyo es más la comida 🍽️, para el almuerzo algo con fibra y menos arroz ayuda a que tu azúcar suba más despacio. ¿Quieres una idea sencilla?',
+    acceptActivity: 'Sí, recuérdamelo',
+    acceptFood: 'Sí, dame una idea',
+    decline: 'Hoy no',
+    acceptedReply: 'Perfecto, te lo dejo recordado para más tarde. 💚',
+    declinedReply: 'No pasa nada 💚 Aquí estoy cuando quieras.',
+    foodIdea:
+      'Te paso una: media taza de arroz en vez de una llena, y agrégale más verduras o menestras. Pequeños cambios, gran diferencia. 🥗',
+    close: 'Y esto queda anotado para tu próximo reporte al doctor. 📝',
+    doctorNote:
+      'Azúcar alta en la mañana. Conversamos el patrón de dormir poco y una acción sencilla para hoy.',
+  },
+
+  safety: {
+    title: 'Mejor que lo vea tu médico',
+    notifyContact: (name: string) => `Avisar a ${name}`,
+    notified: (name: string) => `Le avisé a ${name}`,
+    seeClinic: 'Ver clínica cercana',
+    hideClinic: 'Ocultar clínica',
+    emergencyLine: 'Emergencias: llama al 106 (SAMU)',
+    call106: 'Llamar al 106',
+    whatsappMessage: (name: string) =>
+      `Hola, soy ${name}. Khumpai me sugirió avisarte: necesito que me acompañes a ver al médico. Gracias 💚`,
+    clinic: {
+      label: 'Clínica más cercana',
+      name: 'Centro de Salud San José',
+      address: 'Av. Los Próceres 456 — a 8 min de ti',
+      phone: '(01) 555-1234',
+    },
+  },
+
+  panic: {
+    button: 'Necesito ayuda',
+    title: '¿Necesitas ayuda ahora?',
+    subtitle: 'Si es una emergencia, te conecto de inmediato.',
+    confirm: 'Sí, es urgente',
+    cancel: 'Me equivoqué',
+    callContact: (name: string) => `Llamar a ${name}`,
+    whatsappContact: (name: string) => `Escribir a ${name} por WhatsApp`,
+    call106: 'Llamar al 106 (SAMU)',
+    reassure: (name: string) => `Tranquilo. ${name} ya fue avisada. Estoy aquí contigo. 💚`,
+    whatsappMessage: (name: string) =>
+      `Hola, soy ${name}. Es urgente — necesito tu ayuda ahora. Te escribo desde Khumpai.`,
+  },
+
+  home: {
+    title: 'Inicio',
+    placeholder: 'Tu resumen del día aparecerá aquí pronto.',
+  },
+
+  journal: {
+    title: 'Mi diario',
+    placeholder: 'Aquí verás todo lo que vamos anotando juntos.',
+  },
+
+  common: {
+    you: 'Tú',
+    today: 'Hoy',
+    offline: 'Sin conexión — guardo todo y lo sincronizo después',
+    back: 'Volver',
+    close: 'Cerrar',
+    themeToggle: 'Cambiar tema',
+    themeLight: 'Modo claro',
+    themeDark: 'Modo oscuro',
+  },
+} as const;
+
+export type I18n = typeof es;

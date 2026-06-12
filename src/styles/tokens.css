@@ -1,0 +1,79 @@
+/**
+ * Khumpai design tokens.
+ * Light is the default; dark mode is applied via [data-theme="dark"].
+ * Warm, blue-tinted, never punitive. Red is reserved for true emergencies only.
+ */
+
+:root,
+[data-theme='light'] {
+  /* Brand */
+  --cyan: #45b0a8;
+  --cyan-strong: #389990;
+  --sky: #8dcded;
+  --deep-blue: #1f6699;
+
+  /* Surfaces */
+  --bg-base: #fafbfc;
+  --bg-surface: #ffffff;
+  --bg-sunken: #eef5fb;
+  --border: rgba(31, 102, 153, 0.1);
+
+  /* Text */
+  --text-primary: #1a2e32;
+  --text-secondary: #5a6b72;
+  --text-tertiary: #8a98a0;
+  --text-on-brand: #ffffff;
+
+  /* Signal (used sparingly) */
+  --coral-soft: #e8836b; /* panic button ONLY */
+  --amber: #e8a13d; /* offline / warning */
+  --danger: #e24b4a; /* true emergency ONLY */
+
+  /* Chat bubbles */
+  --bubble-khumpi: #ffffff;
+  --bubble-user: #8dcded;
+  --bubble-user-text: #143a52;
+
+  /* Tints derived from brand, for subtle fills */
+  --cyan-tint: rgba(69, 176, 168, 0.12);
+  --sky-tint: rgba(141, 205, 237, 0.22);
+  --deep-blue-tint: rgba(31, 102, 153, 0.1);
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  /* Brand — lightened for contrast on dark navy */
+  --cyan: #5dc4bc;
+  --cyan-strong: #6fd2ca;
+  --sky: #a5d8f0;
+  --deep-blue: #6bb0e0;
+
+  /* Surfaces — warm dark navy, never cold gray */
+  --bg-base: #10181f;
+  --bg-surface: #1a242e;
+  --bg-sunken: #131c25;
+  --border: rgba(165, 216, 240, 0.12);
+
+  /* Text */
+  --text-primary: #eaf2f6;
+  --text-secondary: #a9bcc6;
+  --text-tertiary: #74878f;
+  --text-on-brand: #0c1318;
+
+  /* Signal */
+  --coral-soft: #f0987f;
+  --amber: #f0b35a;
+  --danger: #f06a69;
+
+  /* Chat bubbles */
+  --bubble-khumpi: #1f2c38;
+  --bubble-user: #2c4a5e;
+  --bubble-user-text: #dcefff;
+
+  --cyan-tint: rgba(93, 196, 188, 0.16);
+  --sky-tint: rgba(165, 216, 240, 0.14);
+  --deep-blue-tint: rgba(107, 176, 224, 0.16);
+
+  color-scheme: dark;
+}

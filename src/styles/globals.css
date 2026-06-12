@@ -1,0 +1,82 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Nunito', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-serif {
+    font-family: 'Source Serif Pro', Georgia, serif;
+  }
+
+  /* Always-visible, brand-tinted focus ring for keyboard users. */
+  :focus-visible {
+    outline: 3px solid var(--cyan);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Touch targets: minimum 48px enforced via utility, see components. */
+  button {
+    font-family: inherit;
+  }
+}
+
+@layer utilities {
+  /* The phone frame backdrop on desktop. */
+  .device-backdrop {
+    background:
+      radial-gradient(120% 80% at 15% 0%, rgba(141, 205, 237, 0.18), transparent 60%),
+      radial-gradient(100% 90% at 100% 100%, rgba(69, 176, 168, 0.14), transparent 55%),
+      var(--bg-sunken);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .touch-target {
+    min-width: 48px;
+    min-height: 48px;
+  }
+}
+
+/* Respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
