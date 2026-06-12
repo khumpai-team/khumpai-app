@@ -9,6 +9,7 @@ import { AppLayout } from '@/app/AppLayout';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { JournalScreen } from '@/screens/JournalScreen';
+import { ReportScreen } from '@/screens/ReportScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 
 export function App() {
@@ -21,6 +22,7 @@ export function App() {
           <Route path="/home" element={<HomeScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/journal" element={<JournalScreen />} />
+          <Route path="/report" element={<ReportScreen />} />
         </Route>
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>

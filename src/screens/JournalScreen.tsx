@@ -6,6 +6,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
 import { dateKey, isSameDay, relativeDayLabel } from '@/lib/dateUtils';
@@ -27,6 +28,7 @@ import {
   ChevronRightIcon,
   EditIcon,
   MoonIcon,
+  ShareIcon,
 } from '@/components/ui/icons';
 
 const MOOD_EMOJI = ['😢', '😟', '😐', '🙂', '😄'];
@@ -69,6 +71,7 @@ function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: 
 }
 
 export function JournalScreen() {
+  const navigate = useNavigate();
   const logs = useAppStore((s) => s.logs);
   const medications = useAppStore((s) => s.medications);
   const doctorNotes = useAppStore((s) => s.doctorNotes);
@@ -122,6 +125,18 @@ export function JournalScreen() {
 
   return (
     <div className="flex h-full flex-col bg-bg-base">
+      {/* title + report shortcut */}
+      <div className="flex items-center justify-between border-b border-border bg-bg-surface px-4 pt-3">
+        <h1 className="font-serif text-xl font-bold text-text-primary">{es.journal.title}</h1>
+        <button
+          type="button"
+          onClick={() => navigate('/report')}
+          className="touch-target flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-bold text-deep-blue transition-colors active:bg-bg-sunken"
+        >
+          <ShareIcon size={18} /> {es.report.open}
+        </button>
+      </div>
+
       {/* day navigator */}
       <header className="border-b border-border bg-bg-surface px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
