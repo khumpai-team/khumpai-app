@@ -1,5 +1,6 @@
 import express from 'express';
 import { env } from './env.js';
+import { stateRoute } from './http/state.route.js';
 
 export function createApp() {
   const app = express();
@@ -12,6 +13,7 @@ export function createApp() {
     next();
   });
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.use(stateRoute);
   return app;
 }
 
