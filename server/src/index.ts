@@ -3,6 +3,7 @@ import { env } from './env.js';
 import { stateRoute } from './http/state.route.js';
 import { logsRoute } from './http/logs.route.js';
 import { entitiesRoute } from './http/entities.route.js';
+import { agentRoute } from './http/agent.route.js';
 
 export function createApp() {
   const app = express();
@@ -18,6 +19,7 @@ export function createApp() {
   app.use(stateRoute);
   app.use(logsRoute);
   app.use(entitiesRoute);
+  app.use(agentRoute);
   return app;
 }
 

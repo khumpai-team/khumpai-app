@@ -89,6 +89,13 @@ export function ChatScreen() {
     [items],
   );
 
+  // Hero/empty state: the pristine first screen (just the seeded greeting).
+  const heroMode = items.length <= 1 && !thinking && !showCheckin;
+  const greeting = useMemo(() => {
+    const first = items.find((it) => it.kind === 'message');
+    return (first && first.kind === 'message' && first.text) || es.chat.greeting;
+  }, [items]);
+
   const headerState: KhumpiState = calm ? 'calm' : listening ? 'listening' : thinking ? 'thinking' : 'happy';
   const statusText = listening ? es.chat.statusListening : thinking ? es.chat.statusThinking : es.chat.status;
 
@@ -176,6 +183,9 @@ export function ChatScreen() {
           )}
         </AnimatePresence>
 
+        {heroMode ? (
+          <ChatHero greeting={greeting} onPick={sendUserMessage} />
+        ) : (
         <div className="relative space-y-3">
           {items.map((it) => {
             switch (it.kind) {
@@ -266,6 +276,7 @@ export function ChatScreen() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* composer */}
@@ -275,6 +286,52 @@ export function ChatScreen() {
       <AnimatePresence>
         {showCheckin && <CheckinSheet onComplete={completeCheckin} onSkip={skipCheckin} />}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/** Welcoming hero shown on the pristine chat — big living Khumpi + quick replies. */
+function ChatHero({ greeting, onPick }: { greeting: string; onPick: (t: string) => void }) {
+  return (
+    <div className="relative flex min-h-full flex-col items-center justify-center gap-6 px-2 pb-4 text-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.7, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+      >
+        <KhumpiAvatar state="happy" size={156} />
+      </motion.div>
+
+      <motion.h2
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.22, duration: 0.5 }}
+        className="max-w-[300px] font-serif text-[22px] font-bold leading-snug text-text-primary"
+      >
+        {greeting}
+      </motion.h2>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.38, duration: 0.5 }}
+        className="flex w-full max-w-[330px] flex-col gap-2"
+      >
+        <p className="eyebrow text-center">{es.chat.suggestionsTitle}</p>
+        {es.chat.suggestions.map((sug, i) => (
+          <motion.button
+            key={sug}
+            type="button"
+            onClick={() => onPick(sug)}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.44 + i * 0.06 }}
+            className="press rounded-[16px] border border-border bg-bg-surface px-4 py-3 text-left text-[15px] font-semibold text-text-primary shadow-soft transition-colors hover:border-border-strong"
+          >
+            {sug}
+          </motion.button>
+        ))}
+      </motion.div>
     </div>
   );
 }
