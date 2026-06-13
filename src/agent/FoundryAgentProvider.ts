@@ -269,7 +269,12 @@ export class FoundryAgentProvider implements AgentProvider {
             id: uid('log'),
             personId: currentPersonId,
             createdAt: now,
-            timestamp: (raw['timestamp'] as string | undefined) ?? now,
+            // Clamp an obviously-wrong timestamp (e.g. a hallucinated past year) to now.
+            timestamp:
+              typeof raw['timestamp'] === 'string' &&
+              new Date(raw['timestamp'] as string).getFullYear() === new Date(now).getFullYear()
+                ? (raw['timestamp'] as string)
+                : now,
             source: 'conversation' as const,
             confirmed: false,
             isOfflineCapture: false,
