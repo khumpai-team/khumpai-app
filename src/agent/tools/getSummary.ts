@@ -11,7 +11,7 @@ import type { LogEntry, GlucoseLog, SleepLog, Medication, AdherenceRecord } from
 // Public types
 // ---------------------------------------------------------------------------
 
-export type SummaryPeriod = 'day' | 'week' | 'month';
+export type SummaryPeriod = 'day' | 'week' | 'month' | '3months';
 
 export interface GlucoseSummary {
   count: number;
@@ -40,9 +40,10 @@ export interface Summary {
 
 function periodMs(period: SummaryPeriod): number {
   switch (period) {
-    case 'day':   return 86_400_000;
-    case 'week':  return 7 * 86_400_000;
-    case 'month': return 30 * 86_400_000;
+    case 'day':     return 86_400_000;
+    case 'week':    return 7 * 86_400_000;
+    case 'month':   return 30 * 86_400_000;
+    case '3months': return 90 * 86_400_000;
   }
 }
 

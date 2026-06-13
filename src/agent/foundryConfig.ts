@@ -173,7 +173,7 @@ export const FOUNDRY_TOOL_DEFINITIONS = [
     type: 'function',
     function: {
       name: 'queryHistory' as const,
-      description: 'Retrieve historical log entries for the current patient, optionally filtered by type and date range.',
+      description: 'Retrieve historical log entries for the current patient, optionally filtered by type and a recency window.',
       parameters: {
         type: 'object',
         properties: {
@@ -182,9 +182,11 @@ export const FOUNDRY_TOOL_DEFINITIONS = [
             enum: ['glucose', 'meal', 'sleep', 'medication', 'symptom'],
             description: 'Filter by entry type. Omit to query all types.',
           },
-          from: { type: 'string', format: 'date-time', description: 'Start of the date range (ISO 8601).' },
-          to: { type: 'string', format: 'date-time', description: 'End of the date range (ISO 8601).' },
-          limit: { type: 'integer', minimum: 1, maximum: 500, description: 'Maximum number of entries to return.' },
+          daysBack: {
+            type: 'integer',
+            minimum: 1,
+            description: 'Only return entries from the last N days. Omit for all history.',
+          },
         },
         required: [],
       },
@@ -194,7 +196,7 @@ export const FOUNDRY_TOOL_DEFINITIONS = [
     type: 'function',
     function: {
       name: 'getSummary' as const,
-      description: 'Return a statistical summary (average, min, max, time-in-range) for glucose or other metrics over a period.',
+      description: 'Return a statistical summary (glucose avg/min/max, meal count, sleep average, medication adherence) over a period.',
       parameters: {
         type: 'object',
         properties: {
@@ -203,13 +205,8 @@ export const FOUNDRY_TOOL_DEFINITIONS = [
             enum: ['day', 'week', 'month', '3months'],
             description: 'Time window for the summary.',
           },
-          metric: {
-            type: 'string',
-            enum: ['glucose', 'sleep', 'meals'],
-            description: 'Metric to summarize.',
-          },
         },
-        required: ['period', 'metric'],
+        required: ['period'],
       },
     },
   },
