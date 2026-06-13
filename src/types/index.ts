@@ -387,3 +387,35 @@ export interface AppState {
   chatHistory: ChatMessage[];
   achievements: Achievement[];
 }
+
+// ---------------------------------------------------------------------------
+// Notifications (in-app reminder system)
+// ---------------------------------------------------------------------------
+
+export type NotificationKind =
+  | 'medication'
+  | 'red_flag'
+  | 'caregiver'
+  | 'checkin'
+  | 'achievement';
+
+export type NotificationSeverity = 'info' | 'warn' | 'urgent';
+
+export type NotificationStatus = 'pending' | 'shown' | 'read' | 'dismissed';
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  severity: NotificationSeverity;
+  /** ISO timestamp the notification became due. */
+  createdAt: string;
+  /** Stable key; a second push with the same key is ignored. */
+  dedupeKey: string;
+  status: NotificationStatus;
+  /** medicationId / logId / achievementId, by kind. */
+  relatedId?: string;
+  /** Caregiver multi-person attribution. */
+  personId?: string;
+}
