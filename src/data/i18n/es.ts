@@ -17,7 +17,6 @@ export const es = {
     chat: 'Khumpi',
     journal: 'Diario',
     report: 'Reporte',
-    playground: 'Lab',
   },
 
   chat: {
@@ -215,6 +214,8 @@ export const es = {
     enabled: 'Avisos activados',
     markAllRead: 'Marcar como leídos',
     dismiss: 'Descartar',
+    dismissAll: 'Descartar todas',
+    close: 'Cerrar',
     medicationTitle: 'Hora de tu medicina',
     medicationBody: (name: string) => `Es hora de tomar ${name}. 💊`,
     checkinTitle: '¿Cómo amaneciste?',

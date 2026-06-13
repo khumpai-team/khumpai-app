@@ -29,6 +29,13 @@ export function NotificationCenter() {
       .forEach((n) => markRead(n.id));
   };
 
+  // "Descartar todas": dismiss every visible notification at once. Dismissed
+  // items keep their dedupeKey, so they stay suppressed and won't pop back.
+  const dismissAll = () => {
+    visible.forEach((n) => dismiss(n.id));
+    setOpen(false);
+  };
+
   // Only offer the toggle when the browser can still be asked (permission ===
   // 'default'); once granted/denied the prompt is a no-op, so we hide it.
   const canEnableToasts = permission === 'default';
@@ -44,7 +51,7 @@ export function NotificationCenter() {
         type="button"
         aria-label={es.notifications.bell}
         onClick={() => setOpen((v) => !v)}
-        className="relative grid h-10 w-10 place-items-center rounded-full bg-bg-base/90 text-lg shadow-soft-xl backdrop-blur"
+        className="relative z-30 grid h-10 w-10 place-items-center rounded-full bg-bg-base/90 text-lg shadow-soft-xl backdrop-blur"
       >
         🔔
         {unread > 0 && (
@@ -54,8 +61,18 @@ export function NotificationCenter() {
         )}
       </button>
 
+      {/* Tap anywhere outside the panel to close it. */}
       {open && (
-        <div className="mt-2 max-h-[60vh] w-72 overflow-y-auto rounded-lg border border-border bg-bg-base p-2 shadow-soft-xl">
+        <button
+          type="button"
+          aria-label={es.notifications.close}
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-20 cursor-default"
+        />
+      )}
+
+      {open && (
+        <div className="relative z-30 mt-2 max-h-[60vh] w-72 overflow-y-auto rounded-lg border border-border bg-bg-base p-2 shadow-soft-xl">
           <div className="mb-2 flex items-center justify-between px-1">
             <p className="text-sm font-bold text-text-primary">{es.notifications.bell}</p>
             {canEnableToasts ? (
@@ -79,14 +96,25 @@ export function NotificationCenter() {
             </div>
           )}
 
-          {unread > 0 && (
-            <button
-              type="button"
-              onClick={markAllRead}
-              className="mb-1.5 ml-auto block text-xs font-semibold text-deep-blue"
-            >
-              {es.notifications.markAllRead}
-            </button>
+          {visible.length > 0 && (
+            <div className="mb-1.5 flex items-center justify-end gap-3">
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllRead}
+                  className="text-xs font-semibold text-deep-blue"
+                >
+                  {es.notifications.markAllRead}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={dismissAll}
+                className="text-xs font-semibold text-text-tertiary"
+              >
+                {es.notifications.dismissAll}
+              </button>
+            </div>
           )}
 
           {visible.length === 0 ? (
