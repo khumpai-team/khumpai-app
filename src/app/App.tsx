@@ -16,7 +16,6 @@ import { ChatScreen } from '@/screens/ChatScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { JournalScreen } from '@/screens/JournalScreen';
 import { ReportScreen } from '@/screens/ReportScreen';
-import { PlaygroundScreen } from '@/screens/PlaygroundScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
@@ -53,7 +52,6 @@ export function App() {
           <Route path="/home" element={<HomeScreen />} />
           <Route path="/journal" element={<JournalScreen />} />
           <Route path="/report" element={<ReportScreen />} />
-          <Route path="/playground" element={<PlaygroundScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
         </Route>
 

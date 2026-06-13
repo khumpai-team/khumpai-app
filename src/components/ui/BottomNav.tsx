@@ -1,13 +1,13 @@
 /**
- * Bottom navigation: Inicio · Diario · (elevated Khumpi → Chat) · Reporte · Lab.
- * Two tabs flank each side of the raised center button (Khumpi's face), which
+ * Bottom navigation: Inicio · Diario · (elevated Khumpi → Chat) · Reporte.
+ * Tabs flank each side of the raised center button (Khumpi's face), which
  * is the primary way into the conversation.
  */
 
 import { NavLink } from 'react-router-dom';
 import { es } from '@/data/i18n/es';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
-import { ReportIcon, SlidersIcon } from '@/components/ui/icons';
+import { ReportIcon } from '@/components/ui/icons';
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
@@ -103,9 +103,6 @@ export function BottomNav() {
       <div className="flex flex-1">
         <SideTab to="/report" label={es.nav.report}>
           {(active) => <ReportIcon size={25} fillOpacity={active ? 0.14 : 0} fill={active ? 'currentColor' : 'none'} />}
-        </SideTab>
-        <SideTab to="/playground" label={es.nav.playground}>
-          {() => <SlidersIcon size={25} />}
         </SideTab>
       </div>
     </nav>
