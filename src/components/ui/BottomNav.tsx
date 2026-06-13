@@ -1,7 +1,7 @@
 /**
- * Bottom navigation: Inicio · Diario · (elevated Khumpi → Chat) · Reporte.
- * Tabs flank each side of the raised center button (Khumpi's face), which
- * is the primary way into the conversation.
+ * Bottom navigation: four uniform tabs — Inicio · Khumpi · Diario · Reporte.
+ * Every tab shares the same icon-over-label layout and spacing; Khumpi (the
+ * conversation) sits inline with the rest rather than as a raised center button.
  */
 
 import { NavLink } from 'react-router-dom';
@@ -77,34 +77,22 @@ export function BottomNav() {
       aria-label="Navegación principal"
       className="relative z-20 flex items-stretch border-t border-border bg-bg-surface px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(31,102,153,0.06)]"
     >
-      <div className="flex flex-1">
-        <SideTab to="/home" label={es.nav.home}>
-          {(active) => <HomeIcon active={active} />}
-        </SideTab>
-        <SideTab to="/journal" label={es.nav.journal}>
-          {(active) => <JournalIcon active={active} />}
-        </SideTab>
-      </div>
-
-      {/* elevated center button → Chat */}
-      <div className="flex w-[76px] shrink-0 justify-center">
-        <NavLink
-          to="/chat"
-          aria-label={es.nav.chat}
-          className="press touch-target absolute -top-7 grid h-[70px] w-[70px] place-items-center rounded-full border-[5px] border-bg-surface"
-          style={{ background: 'var(--grad-cyan)', boxShadow: 'var(--shadow-cyan)' }}
-        >
-          <span className="grid h-[52px] w-[52px] place-items-center rounded-full">
-            <KhumpiAvatar state="happy" size={46} idle={false} title={es.nav.chat} />
+      <SideTab to="/home" label={es.nav.home}>
+        {(active) => <HomeIcon active={active} />}
+      </SideTab>
+      <SideTab to="/chat" label={es.nav.chat}>
+        {() => (
+          <span className="grid h-[26px] w-[26px] place-items-center">
+            <KhumpiAvatar state="happy" size={26} idle={false} title={es.nav.chat} />
           </span>
-        </NavLink>
-      </div>
-
-      <div className="flex flex-1">
-        <SideTab to="/report" label={es.nav.report}>
-          {(active) => <ReportIcon size={25} fillOpacity={active ? 0.14 : 0} fill={active ? 'currentColor' : 'none'} />}
-        </SideTab>
-      </div>
+        )}
+      </SideTab>
+      <SideTab to="/journal" label={es.nav.journal}>
+        {(active) => <JournalIcon active={active} />}
+      </SideTab>
+      <SideTab to="/report" label={es.nav.report}>
+        {(active) => <ReportIcon size={25} fillOpacity={active ? 0.14 : 0} fill={active ? 'currentColor' : 'none'} />}
+      </SideTab>
     </nav>
   );
 }

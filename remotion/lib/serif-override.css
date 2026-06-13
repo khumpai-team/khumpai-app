@@ -1,0 +1,15 @@
+/*
+ * Bridge the family-name gap: the app's CSS asks for 'Source Serif Pro', but
+ * @remotion/google-fonts loads it under Google's current name, 'Source Serif 4'.
+ * Point every serif hook the app uses at the loaded family so display text in
+ * the real components (InsightCard, ConfirmationCard, ReportScreen, …) renders
+ * in the right face instead of falling back to Georgia.
+ */
+
+h1,
+h2,
+h3,
+h4,
+.font-serif {
+  font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif !important;
+}

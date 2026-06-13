@@ -27,3 +27,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Remotion render output (large rendered frames / video) — not source
+/out/
+# Stray screenshots
+/Captura de pantalla *.png

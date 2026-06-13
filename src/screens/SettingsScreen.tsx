@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
 import { SEED_STATE } from '@/data/seed';
 import { useAppStore } from '@/store/appStore';
+import { useOffline } from '@/app/useOffline';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useChatStore } from '@/store/useChatStore';
@@ -48,8 +49,10 @@ export function SettingsScreen() {
   const user = useAppStore((s) => s.user);
   const mode = useAppStore((s) => s.mode);
   const contact = useAppStore((s) => s.emergencyContact);
-  const isOffline = useAppStore((s) => s.isOffline);
-  const setOffline = useAppStore((s) => s.actions.setOffline);
+  // Toggling here runs the full choreography: going online flushes the sync
+  // queue, clears the amber pending dots, and has Khumpi acknowledge what was
+  // captured offline (so it's all done by the time you're back in the chat).
+  const { isOffline, goOffline, goOnline } = useOffline();
 
   const [name, setName] = useState(contact.name);
   const [phone, setPhone] = useState(contact.phone);
@@ -164,7 +167,7 @@ export function SettingsScreen() {
               <p className="font-bold text-text-primary">{es.settings.offlineDemo}</p>
               <p className="text-sm text-text-secondary">{es.settings.offlineHint}</p>
             </div>
-            <Toggle on={isOffline} onChange={setOffline} label={es.settings.offlineDemo} />
+            <Toggle on={isOffline} onChange={(v) => (v ? goOffline() : goOnline())} label={es.settings.offlineDemo} />
           </div>
         </section>
 

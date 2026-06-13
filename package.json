@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "remotion": "remotion studio remotion/index.ts",
+    "remotion:still": "remotion still remotion/index.ts",
+    "remotion:render": "remotion render remotion/index.ts KhumpaiDemo out/khumpai-pitch.mp4"
   },
   "dependencies": {
     "framer-motion": "^11.3.0",
@@ -21,6 +24,9 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.476",
+    "@remotion/google-fonts": "^4.0.476",
+    "@remotion/tailwind": "^4.0.476",
     "@types/node": "^25.9.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -28,6 +34,7 @@
     "autoprefixer": "^10.4.19",
     "jimp": "^0.22.12",
     "postcss": "^8.4.40",
+    "remotion": "^4.0.476",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
