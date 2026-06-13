@@ -22,9 +22,18 @@ describe('offlineEducationAnswer', () => {
     expect(result).toBeNull();
   });
 
-  it('returns null when education question has no digest match', () => {
-    // An education question about a topic with no keyword match in the digest
+  it('returns null when the question has no digest match', () => {
+    // A question about a topic with no keyword match in the digest
     const result = offlineEducationAnswer('¿qué es el péptido C?');
     expect(result).toBeNull();
+  });
+
+  it('answers a topic phrased WITHOUT a strict question cue (regression)', () => {
+    // Previously gated behind isEducationQuestion (needs a question word/?),
+    // so a bare topic fell through to the warm "lo guardo para después" ack.
+    // Now the digest self-gates via queryRag and answers what it knows.
+    const result = offlineEducationAnswer('cuidado de los pies');
+    expect(result).not.toBeNull();
+    expect(result!.body.toLowerCase()).toContain('pie');
   });
 });

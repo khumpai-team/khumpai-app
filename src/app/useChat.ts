@@ -501,7 +501,26 @@ export function useChat() {
         chat.setThinking(true);
         await sleep(450);
 
-        // Offline education: answer from the bundled digest (no network).
+        // 1. Safety first: never give dose/diagnosis advice, even offline.
+        if (intent.kind === 'guardrail') {
+          const { message, doctorNote } = guardrailRedirect(intent.reason, app.currentPersonId);
+          if (doctorNote) app.actions.addDoctorNote(doctorNote);
+          await streamSay(message);
+          return;
+        }
+
+        // 2. A data entry (glucose/meal/symptom/…) → local confirmation card,
+        //    queued for sync. Handled before the digest so a loggable statement
+        //    is never answered with a general snippet.
+        if (isDataIntent(intent)) {
+          chat.setThinking(false);
+          const draft = buildDraftEntries(intent, app.currentPersonId);
+          presentOfflineCard(draft, getOfflineResponse(intent, app.user.name));
+          return;
+        }
+
+        // 3. Otherwise, answer from the pre-charged offline digest if it has
+        //    anything relevant (queryRag self-gates: null when no match).
         const eduResult = offlineEducationAnswer(trimmed);
         if (eduResult !== null) {
           const id = uid('msg');
@@ -515,19 +534,7 @@ export function useChat() {
           return;
         }
 
-        // Not an education question — fall through to data-intent / warm-ack.
-        if (isEducationQuestion(trimmed)) {
-          // queryRag returned null inside the helper; give warm offline fallback.
-          await streamSay(getOfflineResponse(intent, app.user.name));
-          return;
-        }
-
-        if (isDataIntent(intent)) {
-          chat.setThinking(false);
-          const draft = buildDraftEntries(intent, app.currentPersonId);
-          presentOfflineCard(draft, getOfflineResponse(intent, app.user.name));
-          return;
-        }
+        // 4. Nothing matched — warm acknowledgement (never invents advice).
         await streamSay(getOfflineResponse(intent, app.user.name));
         return;
       }
