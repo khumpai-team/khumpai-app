@@ -343,12 +343,11 @@ export function useChat() {
     [registerForPerson],
   );
 
-  // --- Attachments: photo (mock OCR / vision) + files --------------------
+  // --- Attachments: photo (real vision via model) + files ----------------
 
   const sendAttachment = useCallback(
     async (file: File) => {
       const chat = useChatStore.getState();
-      const app = useAppStore.getState();
       const { url, isImage, name } = await readAttachment(file);
 
       if (!isImage) {
@@ -359,26 +358,28 @@ export function useChat() {
         return;
       }
 
+      // Show the image in the chat bubble immediately.
       chat.addMessage({ id: uid('msg'), kind: 'message', role: 'user', text: '', imageUrl: url ?? undefined });
       chat.setThinking(true);
-      await sleep(1200); // "reading" the photo
 
-      // Mock OCR / vision. Deterministic & demo-controllable: the file name
-      // steers it (e.g. "comida.jpg" → meal), defaulting to a glucose reading.
-      const isMeal = /(comida|food|plato|almuerzo|desayuno|cena|meal)/.test(norm(name));
-      if (isMeal) {
-        await streamSay(es.chat.attachMealReading);
-        presentLocalCard(
-          buildDraftEntries({ kind: 'meal', context: 'casa', description: es.chat.attachMealDesc }, app.currentPersonId),
-        );
-        return;
-      }
-      const value = 95 + Math.floor(Math.random() * 110);
-      const moment: GlucoseMoment = new Date().getHours() < 11 ? 'ayunas' : 'post-almuerzo';
-      await streamSay(es.chat.attachImageReading(value));
-      presentLocalCard(buildDraftEntries({ kind: 'glucose', value, moment }, app.currentPersonId));
+      // Build history from current chat items (same pattern as sendUserMessage).
+      const history: AgentInput['history'] = useChatStore
+        .getState()
+        .items.filter((it): it is Extract<typeof it, { kind: 'message' }> => it.kind === 'message')
+        .map((m) => ({ role: m.role, text: m.text }));
+
+      // Send the image to the model via real vision. The model has the
+      // registerEntry tool available and will extract a health entry (glucose
+      // reading, meal, medication) from the photo and propose a confirmation card.
+      await drive(
+        agent.sendMessage({
+          text: 'Mira esta foto y, si ves un dato de salud (azúcar en el glucómetro, una comida, o una pastilla), extráelo para mi diario.',
+          history,
+          imageDataUrl: url ?? undefined,
+        }),
+      );
     },
-    [streamSay, presentLocalCard],
+    [drive, streamSay],
   );
 
   // --- Main entry --------------------------------------------------------

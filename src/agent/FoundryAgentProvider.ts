@@ -42,7 +42,8 @@ interface OAIToolCall {
 
 interface OAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
+  /** Plain text for most messages; an array of content parts for vision messages. */
+  content: string | unknown[] | null;
   /** Present on assistant messages that invoked tools. */
   tool_calls?: OAIToolCall[];
   /** Present on tool-result messages. */
@@ -319,9 +320,18 @@ export class FoundryAgentProvider implements AgentProvider {
   // -------------------------------------------------------------------------
 
   async *sendMessage(input: AgentInput): AsyncIterable<AgentEvent> {
+    // Build the user message content: a vision array when an image is attached,
+    // otherwise a plain string.
+    const userContent: string | unknown[] = input.imageDataUrl
+      ? [
+          { type: 'text', text: input.text },
+          { type: 'image_url', image_url: { url: input.imageDataUrl } },
+        ]
+      : input.text;
+
     const messages: OAIMessage[] = [
       ...mapHistory(input.history),
-      { role: 'user', content: input.text },
+      { role: 'user', content: userContent },
     ];
 
     yield* this.runTurnLoop(messages);

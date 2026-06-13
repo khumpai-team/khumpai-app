@@ -2,7 +2,8 @@ import { KHUMPI_SYSTEM_PROMPT, DIARY_FEWSHOTS } from '../../../src/agent/foundry
 
 export interface ChatMsg {
   role: string;
-  content: string | null;
+  /** Plain text for most messages; an array of content parts for vision messages. */
+  content: string | unknown[] | null;
 }
 
 /**

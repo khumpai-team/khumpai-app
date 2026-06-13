@@ -49,7 +49,7 @@ agentRoute.post('/api/agent/chat', async (req, res) => {
     return;
   }
 
-  const history = ((req.body?.messages ?? []) as Array<{ role: string; content: string | null }>).filter(
+  const history = ((req.body?.messages ?? []) as Array<{ role: string; content: string | unknown[] | null }>).filter(
     (m) => m.role !== 'system',
   );
   let patientContext = '';

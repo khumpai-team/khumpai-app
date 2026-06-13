@@ -29,6 +29,14 @@ export interface AgentInput {
   text: string;
   /** Prior turns, oldest first. Lets a real model keep context. */
   history: ChatTurn[];
+  /**
+   * Optional base64 data URL (e.g. "data:image/jpeg;base64,…") of an image
+   * attachment the user picked. When present, FoundryAgentProvider will send
+   * a vision-enabled user message with both the text and the image so the
+   * model can extract health data (glucose readings, meals, medications) from
+   * the photo.
+   */
+  imageDataUrl?: string;
 }
 
 // --- Tools ----------------------------------------------------------------
