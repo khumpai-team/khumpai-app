@@ -1,3 +1,6 @@
+import { initTelemetry } from './telemetry.js';
+initTelemetry();
+
 import express from 'express';
 import { env } from './env.js';
 import { stateRoute } from './http/state.route.js';
