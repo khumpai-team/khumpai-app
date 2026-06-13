@@ -2,14 +2,16 @@
  * Chat composer: a text field, a LARGE mic button (primary affordance for our
  * low-literacy-friendly audience), and a send button.
  *
- * Real speech-to-text arrives later; for now the mic simulates dictation by
- * dropping in an example phrase, while exposing a `listening` signal so the
+ * Speech-to-text uses the browser Web Speech API (es-PE) via useSpeechToText,
+ * streaming live into the field. On browsers without it, the mic falls back to
+ * a simulated dictation. Either way it exposes a `listening` signal so the
  * header avatar can switch to its listening state.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
+import { useSpeechToText } from '@/app/useSpeechToText';
 import { MicIcon, SendIcon, PlusIcon } from '@/components/ui/icons';
 
 const DICTATION_SAMPLE = 'hoy desayuné dos panes con palta y me salió 160';
@@ -28,6 +30,12 @@ export function ChatInput({
   const timer = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Real STT (Web Speech API) drives `text` (live) and `listening` (lifecycle).
+  const stt = useSpeechToText({
+    onResult: (t) => setText(t),
+    onListeningChange: setListening,
+  });
+
   useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
   useEffect(() => { onListeningChange?.(listening); }, [listening, onListeningChange]);
 
@@ -39,6 +47,12 @@ export function ChatInput({
   };
 
   const toggleMic = () => {
+    if (stt.supported) {
+      if (listening) stt.stop();
+      else stt.start();
+      return;
+    }
+    // Fallback for browsers without the Web Speech API: simulate dictation.
     if (listening) {
       setListening(false);
       if (timer.current) window.clearTimeout(timer.current);
