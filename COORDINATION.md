@@ -143,7 +143,7 @@ Pure tools take data as arguments so they're trivially testable. `TOOL_BUDGET =
 | `guardrailRedirect(reason, opts?)` | → `{ message, doctorNote? }` | Warm refusal + builds a doctor question |
 | `anticipateRiskFromContext(state)` | → `{ message } \| null` | Gentle pre-spike heads-up ("te sugiero…") |
 | `logMedication / upsertMedication` | → store | Adherence + med CRUD |
-| `scheduleReminder(input)` | → stub | **Phase 2** (device notifications) |
+| `scheduleReminder(input)` | → store | Persists the time into `Medication.schedule[]`; the in-app notification scheduler surfaces it |
 | `addDoctorNote / getDoctorNotes` | → note(s) | Doctor-note CRUD/filter |
 | `generateReport(state)` | → `DoctorReport` | Glucose summary, adherence %, patterns w/ honesty labels, doctor questions, disclaimer |
 | `queryRag(query)` | → `{ content, source } \| null` | Retrieval over foods + MINSA/ADA knowledge base; **every** answer carries a `source` |
@@ -216,7 +216,10 @@ exploration but are now UNUSED (safe to `npm uninstall`).
    level; the browser-side confirm/resume needs a manual click-through).
 2. **Persist guardrail doctor notes:** `guardrailRedirect` *builds* a `DoctorNote` for
    dose/diagnosis/stop refusals; the provider/UI should `actions.addDoctorNote(...)` it.
-3. `scheduleReminder` is a stub — integrate real device notifications.
+3. ~~`scheduleReminder` is a stub~~ **Done:** wired to the in-app notification system
+   (`src/lib/notifications/*`, `useNotificationStore`, `useNotificationScheduler`). In-app
+   delivery only fires while a tab is open; **Web Push + service worker** remains the future
+   upgrade for closed-tab / cross-device delivery.
 4. `queryRag` uses a hardcoded knowledge base — swap for Azure AI Search (interface already
    returns `{ content, source }`).
 5. **Production:** the dev-only Vite proxy must become a real backend/API route (the key
