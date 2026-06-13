@@ -10,6 +10,7 @@ import { useCallback, useRef } from 'react';
 import { agent } from '@/agent';
 import type { AgentEvent, AgentInput, RegisterEntryArgs } from '@/agent/AgentProvider';
 import { parseMessage, type ParsedIntent } from '@/agent/parse';
+import { isEducationQuestion } from '@/agent/education';
 import {
   anticipateRiskFromContext,
   buildDraftEntries,
@@ -106,6 +107,83 @@ export function useChat() {
       if (w.trim()) await sleep(wordMs);
     }
     chat.endMessage(id);
+  }, []);
+
+  /**
+   * Answer a diabetes-education question from the grounded knowledge base.
+   * Streams the cited answer from POST /api/rag/ask (SSE) into a Khumpi bubble
+   * and attaches the source chips. On any failure it degrades to an honest
+   * "ask your doctor" line — it never throws into the caller.
+   */
+  const askEducation = useCallback(async (question: string) => {
+    const chat = useChatStore.getState();
+    const msgId = uid('msg');
+    let started = false;
+    let sources: { source: string; sourceUrl?: string }[] = [];
+
+    const ensureBubble = () => {
+      if (started) return;
+      chat.setThinking(false);
+      chat.addMessage({ id: msgId, kind: 'message', role: 'khumpi', text: '', streaming: true });
+      started = true;
+    };
+
+    try {
+      const res = await fetch('/api/rag/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      });
+      if (!res.body) throw new Error('respuesta vacía del servidor');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const jsonStr = trimmed.slice('data:'.length).trim();
+          if (!jsonStr) continue;
+          let ev: { type: string; delta?: string; message?: string; sources?: typeof sources };
+          try {
+            ev = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
+          if (ev.type === 'text' && ev.delta) {
+            ensureBubble();
+            chat.appendDelta(msgId, ev.delta);
+          } else if (ev.type === 'sources' && ev.sources) {
+            // Dedupe by source name (multiple hits can share one source).
+            const seen = new Set<string>();
+            sources = ev.sources.filter((s) => {
+              const key = `${s.source}|${s.sourceUrl ?? ''}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+          } else if (ev.type === 'error') {
+            ensureBubble();
+            chat.appendDelta(msgId, `⚠️ ${ev.message ?? 'No pude consultar mis fuentes.'}`);
+          }
+        }
+      }
+    } catch {
+      ensureBubble();
+      chat.appendDelta(
+        msgId,
+        'Ahora mismo no pude consultar mis fuentes. Es mejor que le preguntes esto a tu médico.',
+      );
+    }
+
+    if (started) chat.attachSources(msgId, sources);
+    else chat.setThinking(false);
   }, []);
 
   /** Evaluate milestone achievements and celebrate any newly unlocked ones. */
@@ -485,6 +563,15 @@ export function useChat() {
         return;
       }
 
+      // Education questions ("¿por qué sube el azúcar?", "¿puedo comer arroz?")
+      // get a GROUNDED, cited answer from the knowledge base instead of an
+      // ungrounded model reply. Runs after guardrails so dose/diagnosis never
+      // land here; a miss falls through to a normal model turn below.
+      if (isEducationQuestion(trimmed)) {
+        await askEducation(trimmed);
+        return;
+      }
+
       const history: AgentInput['history'] = useChatStore
         .getState()
         .items.filter((it): it is Extract<typeof it, { kind: 'message' }> => it.kind === 'message')
@@ -492,7 +579,7 @@ export function useChat() {
 
       await drive(agent.sendMessage({ text: trimmed, history }));
     },
-    [drive, runSpikeArc, runSafety, registerForPerson, streamSay],
+    [drive, runSpikeArc, runSafety, registerForPerson, streamSay, askEducation],
   );
 
   const confirmCard = useCallback(

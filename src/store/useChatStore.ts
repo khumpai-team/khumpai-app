@@ -11,6 +11,12 @@ import type { Insight, RedFlagLevel } from '@/types';
 
 export type CardState = 'pending' | 'saved' | 'dismissed';
 
+/** A cited knowledge-base source backing a grounded (RAG) answer. */
+export interface SourceRef {
+  source: string;
+  sourceUrl?: string;
+}
+
 export interface MessageItem {
   id: string;
   kind: 'message';
@@ -22,6 +28,8 @@ export interface MessageItem {
   pending?: boolean;
   /** Thumbnail data URL when the user attached a photo. */
   imageUrl?: string;
+  /** Citations rendered as chips below a grounded knowledge-base answer. */
+  sources?: SourceRef[];
 }
 
 export interface CardItem {
@@ -94,6 +102,8 @@ interface ChatState {
   markSeeded: () => void;
   appendDelta: (id: string, delta: string) => void;
   endMessage: (id: string) => void;
+  /** Attach citation chips to a message and end its streaming state. */
+  attachSources: (id: string, sources: SourceRef[]) => void;
   addCard: (item: CardItem) => void;
   setCardState: (id: string, state: CardState) => void;
   addItem: (item: ChatItem) => void;
@@ -127,6 +137,12 @@ export const useChatStore = create<ChatState>()(
         set((s) => ({
           items: s.items.map((it) =>
             it.kind === 'message' && it.id === id ? { ...it, streaming: false } : it,
+          ),
+        })),
+      attachSources: (id, sources) =>
+        set((s) => ({
+          items: s.items.map((it) =>
+            it.kind === 'message' && it.id === id ? { ...it, sources, streaming: false } : it,
           ),
         })),
       addCard: (item) => set((s) => ({ items: [...s.items, item] })),

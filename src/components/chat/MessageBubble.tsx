@@ -7,6 +7,7 @@
 
 import { motion } from 'framer-motion';
 import type { ChatRole } from '@/agent/AgentProvider';
+import type { SourceRef } from '@/store/useChatStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 
 const reveal = {
@@ -21,6 +22,7 @@ export function MessageBubble({
   streaming,
   pending,
   imageUrl,
+  sources,
 }: {
   role: ChatRole;
   text: string;
@@ -29,6 +31,8 @@ export function MessageBubble({
   pending?: boolean;
   /** Attached photo thumbnail (user messages). */
   imageUrl?: string;
+  /** Citation chips shown under a grounded knowledge-base answer. */
+  sources?: SourceRef[];
 }) {
   const isKhumpi = role === 'khumpi';
 
@@ -38,16 +42,45 @@ export function MessageBubble({
         <span className="mb-0.5 grid h-12 w-12 shrink-0 place-items-center">
           <KhumpiAvatar state="happy" size={48} head />
         </span>
-        <div className="max-w-[80%] rounded-[20px] rounded-bl-[7px] border border-border bg-[color:var(--bubble-khumpi)] px-4 py-2.5 text-[16px] leading-relaxed text-text-primary shadow-soft">
-          {text}
-          {streaming && (
-            <motion.span
-              aria-hidden
-              className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] rounded-full align-middle"
-              style={{ background: 'var(--cyan)' }}
-              animate={{ opacity: [1, 0.15, 1] }}
-              transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-            />
+        <div className="max-w-[80%]">
+          <div className="rounded-[20px] rounded-bl-[7px] border border-border bg-[color:var(--bubble-khumpi)] px-4 py-2.5 text-[16px] leading-relaxed text-text-primary shadow-soft">
+            {text}
+            {streaming && (
+              <motion.span
+                aria-hidden
+                className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] rounded-full align-middle"
+                style={{ background: 'var(--cyan)' }}
+                animate={{ opacity: [1, 0.15, 1] }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            )}
+          </div>
+          {!streaming && sources && sources.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+                Fuente
+              </span>
+              {sources.map((s, i) =>
+                s.sourceUrl ? (
+                  <a
+                    key={`${s.source}-${i}`}
+                    href={s.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="press rounded-full border border-border bg-bg-surface px-2.5 py-0.5 text-[12px] font-semibold text-deep-blue transition-colors hover:border-border-strong"
+                  >
+                    {s.source}
+                  </a>
+                ) : (
+                  <span
+                    key={`${s.source}-${i}`}
+                    className="rounded-full border border-border bg-bg-surface px-2.5 py-0.5 text-[12px] font-semibold text-text-secondary"
+                  >
+                    {s.source}
+                  </span>
+                ),
+              )}
+            </div>
           )}
         </div>
       </motion.div>

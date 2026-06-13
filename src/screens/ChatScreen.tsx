@@ -181,7 +181,7 @@ export function ChatScreen() {
           {items.map((it) => {
             switch (it.kind) {
               case 'message':
-                return <MessageBubble key={it.id} role={it.role} text={it.text} streaming={it.streaming} pending={it.pending} imageUrl={it.imageUrl} />;
+                return <MessageBubble key={it.id} role={it.role} text={it.text} streaming={it.streaming} pending={it.pending} imageUrl={it.imageUrl} sources={it.sources} />;
               case 'card':
                 return (
                   <ConfirmationCard

@@ -10,7 +10,7 @@ const SYSTEM_PROMPT =
   'Responde SOLO con la información de las FUENTES dadas, en español peruano sencillo y cálido. ' +
   'NO des dosis ni diagnósticos — eso lo decide su médico. ' +
   'Si las fuentes no responden la pregunta, dilo con honestidad y sugiere preguntar al médico. ' +
-  'Termina cada respuesta citando la(s) fuente(s) así: (Fuente: …).';
+  'No escribas las fuentes dentro del texto: la app las muestra aparte como etiquetas.';
 
 ragRoute.post('/api/rag/ask', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
