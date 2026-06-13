@@ -1,10 +1,39 @@
 import { Router } from 'express';
 import { AzureOpenAI } from 'openai';
+import { eq, desc } from 'drizzle-orm';
 import { env } from '../env.js';
-// Shared system prompt + tool schemas (pure data, no front-end runtime deps).
-import { KHUMPI_SYSTEM_PROMPT, FOUNDRY_TOOL_DEFINITIONS } from '../../../src/agent/foundryConfig';
+// Shared tool schemas (pure data, no front-end runtime deps).
+import { FOUNDRY_TOOL_DEFINITIONS } from '../../../src/agent/foundryConfig';
+import { db, schema } from '../db/client.js';
+import { buildAgentMessages } from './buildMessages.js';
 
 export const agentRoute = Router();
+
+const DEMO_PERSON = 'carlos';
+
+/** Compact Spanish patient-context block from the DB (recent state). Best-effort. */
+async function buildPatientContext(): Promise<string> {
+  const [person] = await db.select().from(schema.persons).where(eq(schema.persons.id, DEMO_PERSON));
+  const recentGlucose = await db
+    .select()
+    .from(schema.logs)
+    .where(eq(schema.logs.type, 'glucose'))
+    .orderBy(desc(schema.logs.timestamp))
+    .limit(2);
+  const [med] = await db.select().from(schema.medications).where(eq(schema.medications.personId, DEMO_PERSON));
+  const lines: string[] = [`Paciente: ${person?.name ?? 'el paciente'}.`];
+  if (recentGlucose.length) {
+    const g = recentGlucose
+      .map((r) => {
+        const p = r.payload as { value?: number; moment?: string };
+        return `${p.value} (${p.moment})`;
+      })
+      .join(', ');
+    lines.push(`Últimas lecturas de azúcar: ${g}.`);
+  }
+  if (med) lines.push(`Medicamento: ${med.name} ${med.dose}, horario ${(med.schedule as string[]).join(' y ')}.`);
+  return lines.join('\n');
+}
 
 agentRoute.post('/api/agent/chat', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -20,11 +49,16 @@ agentRoute.post('/api/agent/chat', async (req, res) => {
     return;
   }
 
-  let messages = (req.body?.messages ?? []) as Array<{ role: string; content: string | null }>;
-  if (messages[0]?.role !== 'system') {
-    const nowCtx = `\n\n## Current context\nThe current date and time is ${new Date().toISOString()}.`;
-    messages = [{ role: 'system', content: KHUMPI_SYSTEM_PROMPT + nowCtx }, ...messages];
+  const history = ((req.body?.messages ?? []) as Array<{ role: string; content: string | null }>).filter(
+    (m) => m.role !== 'system',
+  );
+  let patientContext = '';
+  try {
+    patientContext = await buildPatientContext();
+  } catch {
+    /* context is best-effort; proceed without it */
   }
+  const messages = buildAgentMessages({ history, patientContext, nowIso: new Date().toISOString() });
 
   try {
     const client = new AzureOpenAI({
@@ -33,14 +67,34 @@ agentRoute.post('/api/agent/chat', async (req, res) => {
       apiVersion: env.AZURE_OPENAI_API_VERSION,
       deployment: env.AZURE_OPENAI_DEPLOYMENT,
     });
-    const stream = await client.chat.completions.create({
-      model: env.AZURE_OPENAI_DEPLOYMENT,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- our message/tool shapes are looser than the SDK unions
-      messages: messages as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON-schema tool literals
-      tools: FOUNDRY_TOOL_DEFINITIONS as any,
-      stream: true,
-    });
+    const createStream = (strict: boolean) => {
+      const tools = strict
+        ? FOUNDRY_TOOL_DEFINITIONS
+        : // eslint-disable-next-line @typescript-eslint/no-explicit-any -- strip strict for fallback
+          FOUNDRY_TOOL_DEFINITIONS.map((t: any) =>
+            t.function?.name === 'registerEntry'
+              ? { ...t, function: { ...t.function, strict: false } }
+              : t,
+          );
+      return client.chat.completions.create({
+        model: env.AZURE_OPENAI_DEPLOYMENT,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- looser shapes than SDK unions
+        messages: messages as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON-schema tool literals
+        tools: tools as any,
+        stream: true,
+      });
+    };
+    // Strict structured-output / anyOf may not be supported on every model+API
+    // version — fall back to non-strict on a 400 (client Zod still validates).
+    let stream: Awaited<ReturnType<typeof createStream>>;
+    try {
+      stream = await createStream(true);
+    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- inspect HTTP status
+      if ((err as any)?.status === 400) stream = await createStream(false);
+      else throw err;
+    }
 
     const acc = new Map<number, { id: string; name: string; arguments: string }>();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OpenAI streaming chunk

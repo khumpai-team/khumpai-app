@@ -16,7 +16,6 @@ import { useOffline } from '@/app/useOffline';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useSessionStore } from '@/store/useSessionStore';
-import { useThemeStore } from '@/store/useThemeStore';
 import { KhumpiAvatar, type KhumpiState } from '@/components/khumpi/KhumpiAvatar';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
@@ -28,7 +27,7 @@ import { ActionCard } from '@/components/cards/ActionCard';
 import { SafetyCard } from '@/components/cards/SafetyCard';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { CheckinSheet } from '@/components/sheets/CheckinSheet';
-import { SunIcon, MoonToggleIcon } from '@/components/ui/icons';
+import { PanicButton } from '@/components/ui/PanicButton';
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -50,8 +49,6 @@ export function ChatScreen() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [reconnectCount, setReconnectCount] = useState<number | null>(null);
 
-  const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const { isOffline, goOffline, goOnline } = useOffline();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -155,14 +152,7 @@ export function ChatScreen() {
             {isOffline ? es.offline.banner.replace('📥 ', '') : statusText}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={es.common.themeToggle}
-          className="touch-target grid h-11 w-11 place-items-center rounded-full text-text-secondary transition-colors active:bg-bg-sunken"
-        >
-          {theme === 'dark' ? <SunIcon size={22} /> : <MoonToggleIcon size={22} />}
-        </button>
+        <PanicButton variant="inline" />
       </header>
 
       <OfflineBanner offline={isOffline} reconnectCount={reconnectCount} />

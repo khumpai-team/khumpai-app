@@ -32,12 +32,15 @@ function openNative(href: string) {
 
 type Phase = 'idle' | 'confirming' | 'active';
 
-export function PanicButton() {
+export function PanicButton({ variant = 'floating' }: { variant?: 'floating' | 'inline' }) {
   const contact = useAppStore((s) => s.emergencyContact);
   const userName = useAppStore((s) => s.user.name);
   const [phase, setPhase] = useState<Phase>('idle');
-  // On the chat screen, sit above the composer so we don't clash with send/mic.
   const onChat = useLocation().pathname === '/chat';
+
+  // On chat, the emergency button lives inline in the header — so the global
+  // floating one steps aside there to avoid duplication.
+  if (variant === 'floating' && onChat) return null;
 
   const tel = `tel:${digits(contact.phone)}`;
   const wa = `https://wa.me/${digits(contact.phone)}?text=${encodeURIComponent(
@@ -59,6 +62,12 @@ export function PanicButton() {
 
   const close = () => setPhase('idle');
 
+  const triggerStyle = {
+    background: 'color-mix(in srgb, var(--coral-soft) 14%, var(--bg-surface))',
+    borderColor: 'color-mix(in srgb, var(--coral-soft) 38%, transparent)',
+    color: 'var(--coral-soft)',
+  } as const;
+
   return (
     <>
       <button
@@ -66,14 +75,12 @@ export function PanicButton() {
         onClick={() => setPhase('confirming')}
         aria-label={es.panic.button}
         title={es.panic.button}
-        className="touch-target absolute right-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
-        style={{
-          bottom: onChat ? 148 : 84,
-          background: 'color-mix(in srgb, var(--coral-soft) 14%, var(--bg-surface))',
-          borderColor: 'color-mix(in srgb, var(--coral-soft) 38%, transparent)',
-          color: 'var(--coral-soft)',
-          boxShadow: '0 2px 8px rgba(31,102,153,0.08)',
-        }}
+        className={
+          variant === 'inline'
+            ? 'press touch-target grid h-11 w-11 place-items-center rounded-full border'
+            : 'touch-target absolute bottom-[84px] right-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95'
+        }
+        style={variant === 'inline' ? triggerStyle : { ...triggerStyle, boxShadow: '0 2px 8px rgba(31,102,153,0.08)' }}
       >
         <AlertIcon size={21} />
       </button>
