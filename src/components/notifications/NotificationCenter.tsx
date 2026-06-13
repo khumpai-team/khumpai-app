@@ -1,8 +1,10 @@
 // src/components/notifications/NotificationCenter.tsx
 /**
- * A floating bell in the top-right of the phone frame. Shows an unread badge,
- * opens a panel listing notifications (newest first) with mark-read / dismiss,
- * and holds the single permission toggle that enables OS toasts.
+ * A floating bell on the right of the phone frame (below the screen header so
+ * it never overlaps it). Shows an unread badge, opens a panel listing
+ * notifications (newest first) with mark-read / per-item dismiss, an always-
+ * visible X to close the panel, tap-outside-to-close, and the single
+ * permission toggle that enables OS toasts.
  */
 import { useState } from 'react';
 import { es } from '@/data/i18n/es';
@@ -46,7 +48,7 @@ export function NotificationCenter() {
   };
 
   return (
-    <div className="absolute right-3 top-3 z-30">
+    <div className="absolute right-3 top-20 z-30">
       <button
         type="button"
         aria-label={es.notifications.bell}
@@ -75,19 +77,30 @@ export function NotificationCenter() {
         <div className="relative z-30 mt-2 max-h-[60vh] w-72 overflow-y-auto rounded-lg border border-border bg-bg-base p-2 shadow-soft-xl">
           <div className="mb-2 flex items-center justify-between px-1">
             <p className="text-sm font-bold text-text-primary">{es.notifications.bell}</p>
-            {canEnableToasts ? (
+            <div className="flex items-center gap-2">
+              {canEnableToasts ? (
+                <button
+                  type="button"
+                  onClick={enableToasts}
+                  className="text-xs font-semibold text-deep-blue"
+                >
+                  {es.notifications.enable}
+                </button>
+              ) : permission === 'granted' ? (
+                <span className="text-xs font-semibold text-text-tertiary">
+                  {es.notifications.enabled}
+                </span>
+              ) : null}
+              {/* Always-present X to close the panel. */}
               <button
                 type="button"
-                onClick={enableToasts}
-                className="text-xs font-semibold text-deep-blue"
+                aria-label={es.notifications.close}
+                onClick={() => setOpen(false)}
+                className="grid h-6 w-6 place-items-center rounded-full text-text-tertiary hover:bg-bg-sunken"
               >
-                {es.notifications.enable}
+                ✕
               </button>
-            ) : permission === 'granted' ? (
-              <span className="text-xs font-semibold text-text-tertiary">
-                {es.notifications.enabled}
-              </span>
-            ) : null}
+            </div>
           </div>
 
           {urgent.length > 0 && (
