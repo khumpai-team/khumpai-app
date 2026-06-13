@@ -1,11 +1,12 @@
 /**
- * queryRag — pure retrieval from a hardcoded knowledge base.
+ * queryRag — pure, offline retrieval from the bundled knowledge digest.
  *
- * Interface is designed for easy swap to Azure AI Search or a vector database
- * in Phase 2 — just replace KNOWLEDGE_BASE and the match logic while keeping
- * the same function signature.
+ * This is the OFFLINE path (no network): it matches against KNOWLEDGE_OFFLINE
+ * (distilled from the source PDFs, see src/data/knowledge-offline.ts) plus the
+ * Peruvian food table. The ONLINE path is the server's semantic pgvector search
+ * at POST /api/rag/ask. Same signature, so callers don't care which ran.
  *
- * Every answer MUST include a source (MINSA, ADA, or "Tabla de alimentos").
+ * Every answer MUST include a source.
  */
 
 import { z } from 'zod';

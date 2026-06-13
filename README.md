@@ -80,10 +80,13 @@ Two implementations satisfy it — a deterministic `MockAgentProvider` (offline 
 fully testable) and the `FoundryAgentProvider` (real Azure OpenAI). Swapping them is
 a single env flag; **no UI changes required**.
 
-**Retrieval (RAG).** Lexical, not vector — Postgres `to_tsvector('spanish')` +
-`ts_rank` with an `ILIKE` fallback over a curated 40-entry corpus. It needs no
-embedding deployment, so it works the moment the DB is seeded. The `retrieve()`
-signature is stable, so an upgrade to pgvector/embeddings is a drop-in swap.
+**Retrieval (RAG).** The knowledge base is built from 18 curated diabetes PDFs
+(`docs/rag-docs/`) — extracted, chunked, embedded with Azure `text-embedding-3-small`,
+and stored in Postgres **pgvector**. `retrieve()` embeds the question and does a
+cosine search, **falling back to Spanish full-text search** (`to_tsvector('spanish')` +
+`ts_rank` + `ILIKE`) when no embedding deployment is configured. **Offline**, the same
+PDFs are distilled into a bundled digest (`src/data/knowledge-offline.ts`) that the app
+answers from with no signal — keyword-matched, source-cited, never doses/diagnosis.
 
 ---
 
@@ -95,9 +98,9 @@ signature is stable, so an upgrade to pgvector/embeddings is a drop-in swap.
 | **Agent** | Streaming `AgentProvider` seam · Azure OpenAI (`gpt-5.4-mini`) via the `openai` `AzureOpenAI` client · strict function tools · prompt caching |
 | **Voice / Vision** | Web Speech API (`es-PE`) · model vision for photo attachments |
 | **Backend** | Express, Drizzle ORM, PostgreSQL, Server-Sent Events, Zod validation |
-| **RAG** | Postgres Spanish full-text search + `ILIKE` fallback (lexical) |
+| **RAG** | PDFs → `unpdf` extract → chunk → Azure `text-embedding-3-small` → Postgres **pgvector** cosine search (Spanish FTS fallback); offline = bundled curated digest |
 | **Observability / Safety** | Azure Application Insights · Azure AI Content Safety *(both scaffolded, dormant unless configured)* |
-| **Testing** | Vitest (+ Supertest) — 226 front-end tests, server route/retrieval tests |
+| **Testing** | Vitest (+ Supertest) — 243 front-end tests, server route/retrieval tests |
 | **Deploy** | Single Docker container → Azure Container Apps |
 
 ---
@@ -198,13 +201,13 @@ src/
   components/   chat · cards (confirm/insight/action/safety) · khumpi avatar · notifications · report
   screens/      Chat · Home · Journal · Report (doctor) · Caregiver · Settings · Onboarding
   store/        Zustand stores (app state, chat transcript, session)
-  data/         seed data · Peruvian foods · Spanish i18n
+  data/         seed data · Peruvian foods · Spanish i18n · knowledge-offline.ts (offline digest)
   types/        the canonical domain model (the locked contract)
 server/
   src/http/     state · logs · entities · agent (SSE proxy) · rag (SSE, grounded) routes
-  src/rag/      retrieve() (Spanish FTS) · ingest
-  src/data/     knowledge.ts — curated diabetes corpus (ADA/MINSA/OMS, paraphrased)
+  src/rag/      manifest · pdf/{extract,chunk} · embed · ingest · retrieve (pgvector + FTS fallback)
   src/db/       Drizzle schema · client · seed
+docs/rag-docs/     the 18 source diabetes PDFs (ingested into pgvector)
 docs/superpowers/  design specs and implementation plans
 ```
 
