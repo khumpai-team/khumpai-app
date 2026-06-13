@@ -7,6 +7,7 @@ const Env = z.object({
   AZURE_OPENAI_API_KEY: z.string().optional(),
   AZURE_OPENAI_DEPLOYMENT: z.string().default('gpt-4.1'),
   AZURE_OPENAI_API_VERSION: z.string().default('2024-12-01-preview'),
+  AZURE_OPENAI_EMBEDDING_DEPLOYMENT: z.string().optional(),
   PORT: z.coerce.number().default(8787),
   ALLOWED_ORIGIN: z.string().default('http://localhost:5173'),
 });

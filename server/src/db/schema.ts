@@ -94,4 +94,5 @@ export const knowledge = pgTable('knowledge', {
   content: text('content').notNull(),
   source: text('source').notNull(),
   sourceUrl: text('source_url'),
+  docId: text('doc_id'),
 });
