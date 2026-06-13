@@ -205,6 +205,22 @@ export const useAppStore = create<KhumpaiStore>()(
     {
       name: 'khumpai-app',
       storage: createJSONStorage(() => sessionStorage),
+      // `actions` holds functions. JSON.stringify drops them, so persisting the
+      // whole store writes `actions: {}` — which the default merge would then
+      // splat over the live actions on rehydrate, leaving `actions.addLog`
+      // undefined (confirming a card would throw and the validation gets stuck).
+      // So: never persist `actions`, and always keep the live ones on merge
+      // (the latter also heals stale storage written before this fix).
+      partialize: (state) => {
+        const persisted: Partial<KhumpaiStore> = { ...state };
+        delete persisted.actions;
+        return persisted;
+      },
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<KhumpaiStore>),
+        actions: current.actions,
+      }),
     },
   ),
 );
