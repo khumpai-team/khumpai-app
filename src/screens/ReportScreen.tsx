@@ -12,7 +12,7 @@
  * patient (currentPersonId) so it works for both fronts.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
@@ -21,9 +21,12 @@ import { evaluateAchievements } from '@/lib/achievements';
 import { uid } from '@/lib/id';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
+import { useVisitMediaStore } from '@/store/useVisitMediaStore';
+import { useSpeechToText } from '@/app/useSpeechToText';
+import { readAttachment } from '@/lib/image';
 import type { GlucoseLog, GlucoseMoment } from '@/types';
 import { Ring, RangeBar, TrendChart, MomentBars } from '@/components/report/viz';
-import { ChevronLeftIcon, ShareIcon, PlusIcon, CheckIcon, ChatBubbleIcon } from '@/components/ui/icons';
+import { ChevronLeftIcon, ShareIcon, PlusIcon, CheckIcon, ChatBubbleIcon, MicIcon } from '@/components/ui/icons';
 
 type Tab = 'doctor' | 'visits';
 type Period = 7 | 30 | 90;
@@ -197,6 +200,14 @@ function DoctorTab() {
     }
   };
 
+  // Plain-language talking points synthesized from the period.
+  const talkPoints: string[] = [];
+  if (s.avg != null) talkPoints.push(es.report.talkAvg(s.avg));
+  if (s.total) talkPoints.push(es.report.talkRange(s.pctIn));
+  if (s.spikes > 0) talkPoints.push(es.report.talkSpikes(s.spikes));
+  if (s.adh != null) talkPoints.push(es.report.talkAdherence(s.adh));
+  patterns.forEach((p) => talkPoints.push(p.text));
+
   return (
     <div className="flex flex-col gap-3.5 px-4 py-4">
       {/* report meta */}
@@ -224,6 +235,74 @@ function DoctorTab() {
           </button>
         ))}
       </div>
+
+      {/* WHAT TO SAY — the lead: talking points + questions */}
+      <section className="overflow-hidden rounded-lg border border-border shadow-soft-lg">
+        <div className="p-4" style={{ background: 'linear-gradient(135deg, var(--cyan-tint), var(--bg-surface) 62%)' }}>
+          <div className="flex items-start gap-2.5">
+            <span className="text-xl" aria-hidden>🗣️</span>
+            <h2 className="font-serif text-[17px] font-bold leading-snug text-deep-blue">{es.report.talkTitle}</h2>
+          </div>
+          {talkPoints.length ? (
+            <>
+              <p className="mt-2 text-sm text-text-secondary">{es.report.talkIntro}</p>
+              <ul className="mt-3 flex flex-col gap-2.5">
+                {talkPoints.map((t, i) => (
+                  <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-text-primary">
+                    <span className="mt-[7px] h-2 w-2 shrink-0 rounded-full" style={{ background: 'var(--cyan)' }} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="mt-2 text-[15px] text-text-secondary">{es.report.talkEmpty}</p>
+          )}
+        </div>
+
+        {/* questions to ask */}
+        <div className="border-t border-border bg-bg-surface p-4">
+          <p className="eyebrow text-deep-blue">❓ {es.report.talkAsk}</p>
+          <ul className="mt-2 flex flex-col gap-2">
+            {questions.length ? (
+              questions.map((q) => (
+                <li key={q.id} className="flex gap-2 text-[15px] leading-relaxed text-text-primary">
+                  <span className="text-deep-blue">•</span>
+                  {q.text}
+                </li>
+              ))
+            ) : (
+              <li className="text-[15px] text-text-secondary">{es.report.noQuestions}</li>
+            )}
+          </ul>
+          {adding ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <textarea
+                className={fieldCls}
+                rows={2}
+                autoFocus
+                placeholder={es.report.questionPlaceholder}
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button type="button" onClick={addQuestion} className="press btn-primary rounded-full px-4 py-2 text-sm font-bold">
+                  {es.report.addQuestion}
+                </button>
+                <button type="button" onClick={() => setAdding(false)} className="rounded-full border border-border px-4 py-2 text-sm font-bold text-text-secondary">
+                  {es.confirmation.cancel}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setAdding(true)} className="mt-3 flex items-center gap-1.5 text-sm font-bold text-deep-blue">
+              <PlusIcon size={18} /> {es.report.addQuestion}
+            </button>
+          )}
+        </div>
+      </section>
+
+      <p className="eyebrow mt-1">{es.report.detailsTitle}</p>
 
       {s.total === 0 ? (
         <Card>
@@ -338,48 +417,6 @@ function DoctorTab() {
         )}
       </Card>
 
-      {/* QUESTIONS */}
-      <Card>
-        <SectionTitle>❓ {es.report.questionsTitle}</SectionTitle>
-        <ul className="mt-2 flex flex-col gap-2">
-          {questions.length ? (
-            questions.map((q) => (
-              <li key={q.id} className="flex gap-2 text-[15px] leading-relaxed text-text-primary">
-                <span className="text-deep-blue">•</span>
-                {q.text}
-              </li>
-            ))
-          ) : (
-            <li className="text-[15px] text-text-secondary">{es.report.noQuestions}</li>
-          )}
-        </ul>
-
-        {adding ? (
-          <div className="mt-3 flex flex-col gap-2">
-            <textarea
-              className={fieldCls}
-              rows={2}
-              autoFocus
-              placeholder={es.report.questionPlaceholder}
-              value={questionText}
-              onChange={(e) => setQuestionText(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <button type="button" onClick={addQuestion} className="press btn-primary rounded-full px-4 py-2 text-sm font-bold">
-                {es.report.addQuestion}
-              </button>
-              <button type="button" onClick={() => setAdding(false)} className="rounded-full border border-border px-4 py-2 text-sm font-bold text-text-secondary">
-                {es.confirmation.cancel}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setAdding(true)} className="mt-3 flex items-center gap-1.5 text-sm font-bold text-deep-blue">
-            <PlusIcon size={18} /> {es.report.addQuestion}
-          </button>
-        )}
-      </Card>
-
       {/* SHARE */}
       <button
         type="button"
@@ -453,55 +490,132 @@ function VisitsTab() {
   const visits = useAppStore((s) => s.doctorVisits);
   const actions = useAppStore((s) => s.actions);
   const personId = useAppStore((s) => s.currentPersonId);
+  const media = useVisitMediaStore((s) => s.media);
+  const addMedia = useVisitMediaStore((s) => s.add);
 
   const [adding, setAdding] = useState(false);
   const [said, setSaid] = useState('');
   const [indications, setIndications] = useState('');
   const [next, setNext] = useState('');
+  const [pending, setPending] = useState<string[]>([]);
+  const [listening, setListening] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const stt = useSpeechToText({ onResult: (t) => setSaid(t), onListeningChange: setListening });
 
   const sorted = useMemo(() => [...visits].sort((a, b) => b.date.localeCompare(a.date)), [visits]);
+
+  const reset = () => {
+    setSaid('');
+    setIndications('');
+    setNext('');
+    setPending([]);
+    setAdding(false);
+    if (listening) stt.stop();
+  };
+
+  const attach = async (file: File) => {
+    const { url, isImage } = await readAttachment(file);
+    if (isImage && url) setPending((p) => [...p, url]);
+  };
 
   const saveVisit = () => {
     const whatDoctorSaid = said.trim();
     if (!whatDoctorSaid) return;
+    const id = uid('visit');
     actions.addDoctorVisit({
-      id: uid('visit'),
+      id,
       personId,
       date: new Date().toISOString().slice(0, 10),
       whatDoctorSaid,
       indications: indications.split('\n').map((x) => x.trim()).filter(Boolean),
       nextAppointment: next || undefined,
     });
+    if (pending.length) addMedia(id, pending);
     useChatStore.getState().addMessage({ id: uid('msg'), kind: 'message', role: 'khumpi', text: es.report.visitAck(whatDoctorSaid) });
-    setSaid('');
-    setIndications('');
-    setNext('');
-    setAdding(false);
+    reset();
   };
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
+      <p className="text-[15px] leading-relaxed text-text-secondary">{es.report.visitsIntro}</p>
+
       {adding ? (
         <Card>
           <h2 className="font-serif text-lg font-bold text-deep-blue">{es.report.newVisit}</h2>
-          <div className="mt-3 flex flex-col gap-3">
-            <label className="text-sm font-semibold text-text-secondary">
-              {es.report.visitSaid}
-              <textarea className={`${fieldCls} mt-1`} rows={2} value={said} onChange={(e) => setSaid(e.target.value)} />
-            </label>
+          <div className="mt-3 flex flex-col gap-4">
+            {/* what the doctor said — type or dictate */}
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-text-secondary">{es.report.visitSaid}</span>
+                {stt.supported && (
+                  <button
+                    type="button"
+                    onClick={() => (listening ? stt.stop() : stt.start())}
+                    aria-pressed={listening}
+                    className="press relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold"
+                    style={{
+                      background: listening ? 'var(--deep-blue)' : 'var(--cyan-tint)',
+                      color: listening ? 'var(--text-on-brand)' : 'var(--cyan)',
+                    }}
+                  >
+                    <MicIcon size={15} /> {listening ? es.report.visitDictateStop : es.report.visitDictate}
+                  </button>
+                )}
+              </div>
+              <textarea
+                className={`${fieldCls} mt-1`}
+                rows={2}
+                value={said}
+                placeholder={es.report.visitSaidPlaceholder}
+                onChange={(e) => setSaid(e.target.value)}
+              />
+            </div>
+
             <label className="text-sm font-semibold text-text-secondary">
               {es.report.visitIndications}
               <textarea className={`${fieldCls} mt-1`} rows={3} value={indications} onChange={(e) => setIndications(e.target.value)} />
             </label>
+
+            {/* attachments (receta / foto) */}
+            <div>
+              <span className="text-sm font-semibold text-text-secondary">{es.report.visitAttachments}</span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {pending.map((u, i) => (
+                  <img key={i} src={u} alt="" className="h-16 w-16 rounded-md border border-border object-cover" />
+                ))}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) attach(f);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  aria-label={es.report.visitAttach}
+                  className="press grid h-16 w-16 place-items-center rounded-md border border-dashed border-border-strong text-text-tertiary"
+                >
+                  <PlusIcon size={20} />
+                </button>
+              </div>
+            </div>
+
             <label className="text-sm font-semibold text-text-secondary">
               {es.report.visitNext}
               <input type="date" className={`${fieldCls} mt-1`} value={next} onChange={(e) => setNext(e.target.value)} />
             </label>
+
             <div className="flex gap-2">
               <button type="button" onClick={saveVisit} className="press btn-primary rounded-full px-4 py-2.5 text-sm font-bold">
                 {es.report.visitSave}
               </button>
-              <button type="button" onClick={() => setAdding(false)} className="rounded-full border border-border px-4 py-2.5 text-sm font-bold text-text-secondary">
+              <button type="button" onClick={reset} className="rounded-full border border-border px-4 py-2.5 text-sm font-bold text-text-secondary">
                 {es.confirmation.cancel}
               </button>
             </div>
@@ -533,6 +647,13 @@ function VisitsTab() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {media[v.id]?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {media[v.id].map((u, i) => (
+                    <img key={i} src={u} alt="" className="h-16 w-16 rounded-md border border-border object-cover" />
+                  ))}
+                </div>
               )}
               {v.nextAppointment && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-deep-blue">
