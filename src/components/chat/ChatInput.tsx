@@ -78,16 +78,16 @@ export function ChatInput({
           </button>
         </>
       )}
-      <div className="flex flex-1 items-center rounded-[22px] border border-border bg-bg-base px-4 shadow-[inset_0_1px_2px_rgba(15,36,41,0.04)] transition-colors focus-within:border-border-strong">
+      <label className="flex flex-1 cursor-text items-center rounded-[22px] border border-border bg-bg-base px-4 shadow-[inset_0_1px_2px_rgba(15,36,41,0.04)] transition-colors focus-within:border-border-strong">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }}
           placeholder={listening ? es.chat.statusListening : es.chat.inputPlaceholder}
           aria-label={es.chat.inputPlaceholder}
-          className="min-h-[44px] w-full bg-transparent text-[16px] text-text-primary placeholder:text-text-tertiary focus:outline-none"
+          className="min-h-[44px] w-full bg-transparent text-[16px] text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:shadow-none"
         />
-      </div>
+      </label>
 
       {canSend ? (
         <button

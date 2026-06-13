@@ -68,7 +68,7 @@ function parseMed(text: string): MedDraft {
 }
 
 const inputCls =
-  'flex-1 bg-transparent px-3 py-2 text-[16px] text-text-primary placeholder:text-text-tertiary focus:outline-none';
+  'flex-1 bg-transparent px-3 py-2 text-[16px] text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:shadow-none';
 const editCls =
   'w-full rounded-md border border-border bg-bg-base px-3 py-2 text-[16px] text-text-primary focus-visible:outline-cyan';
 
@@ -277,7 +277,7 @@ export function OnboardingScreen() {
               >
                 <PlusIcon size={22} />
               </button>
-              <div className="flex flex-1 items-center rounded-full border border-border bg-bg-base px-2">
+              <label className="flex flex-1 cursor-text items-center rounded-full border border-border bg-bg-base px-2 transition-colors focus-within:border-border-strong">
                 <input
                   className={inputCls}
                   autoFocus
@@ -299,7 +299,7 @@ export function OnboardingScreen() {
                     }
                   }}
                 />
-              </div>
+              </label>
               <button
                 type="button"
                 onClick={submitText}
