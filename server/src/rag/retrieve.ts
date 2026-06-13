@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db/client.js';
+import { embedOne } from './embed.js';
 
 export interface RetrieveResult {
   content: string;
@@ -9,6 +10,35 @@ export interface RetrieveResult {
 }
 
 export async function retrieve(query: string, k = 4): Promise<RetrieveResult[]> {
+  // Semantic path: when embeddings are configured, embed the query and do a
+  // pgvector cosine search. Falls through to lexical FTS on null/empty/error.
+  try {
+    const qvec = await embedOne(query);
+    if (qvec) {
+      const lit = `[${qvec.join(',')}]`;
+      const rows = await db.execute<{
+        content: string; source: string; sourceUrl: string | null; score: number;
+      }>(sql`
+        SELECT content, source, source_url AS "sourceUrl",
+               1 - (embedding <=> ${lit}::vector) AS score
+        FROM knowledge
+        WHERE embedding IS NOT NULL
+        ORDER BY embedding <=> ${lit}::vector
+        LIMIT ${k}
+      `);
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          content: r.content,
+          source: r.source,
+          sourceUrl: r.sourceUrl ?? undefined,
+          score: Number(r.score),
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn(`[retrieve] semantic path failed, falling back to lexical: ${String(err)}`);
+  }
+
   // Primary: Postgres full-text search with Spanish dictionary
   const ftsRows = await db.execute<{
     content: string;
