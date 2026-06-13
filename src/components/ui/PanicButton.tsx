@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
@@ -85,7 +86,11 @@ export function PanicButton({ variant = 'floating' }: { variant?: 'floating' | '
         <AlertIcon size={21} />
       </button>
 
-      <AnimatePresence>
+      {/* Portal into the phone frame so the overlay always covers the full
+          frame — not just whatever positioned ancestor the trigger sits in
+          (e.g. the chat header, which would otherwise clip it to the top). */}
+      {createPortal(
+        <AnimatePresence>
         {phase !== 'idle' && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -182,7 +187,9 @@ export function PanicButton({ variant = 'floating' }: { variant?: 'floating' | '
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.getElementById('app-frame') ?? document.body,
+      )}
     </>
   );
 }
