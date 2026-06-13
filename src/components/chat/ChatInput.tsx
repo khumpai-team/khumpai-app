@@ -8,7 +8,7 @@
  * header avatar can switch to its listening state.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
 import { useSpeechToText } from '@/app/useSpeechToText';
@@ -20,10 +20,19 @@ export function ChatInput({
   onSend,
   onListeningChange,
   onAttach,
+  placeholder,
+  footer,
+  autoFocus,
 }: {
   onSend: (text: string) => void;
   onListeningChange?: (listening: boolean) => void;
   onAttach?: (file: File) => void;
+  /** Field placeholder; defaults to the chat composer copy. */
+  placeholder?: string;
+  /** Optional content rendered below the composer row (e.g. a "skip" link). */
+  footer?: ReactNode;
+  /** Focus the field on mount. */
+  autoFocus?: boolean;
 }) {
   const [text, setText] = useState('');
   const [listening, setListening] = useState(false);
@@ -68,7 +77,8 @@ export function ChatInput({
   const canSend = text.trim().length > 0;
 
   return (
-    <div className="flex items-end gap-2 border-t border-border bg-bg-surface px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
+    <div className="border-t border-border bg-bg-surface px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
+    <div className="flex items-end gap-2">
       {onAttach && (
         <>
           <input
@@ -95,10 +105,11 @@ export function ChatInput({
       <label className="flex flex-1 cursor-text items-center rounded-[22px] border border-border bg-bg-base px-4 shadow-[inset_0_1px_2px_rgba(15,36,41,0.04)] transition-colors focus-within:border-border-strong">
         <input
           value={text}
+          autoFocus={autoFocus}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }}
-          placeholder={listening ? es.chat.statusListening : es.chat.inputPlaceholder}
-          aria-label={es.chat.inputPlaceholder}
+          placeholder={listening ? es.chat.statusListening : (placeholder ?? es.chat.inputPlaceholder)}
+          aria-label={placeholder ?? es.chat.inputPlaceholder}
           className="min-h-[44px] w-full bg-transparent text-[16px] text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:shadow-none"
         />
       </label>
@@ -141,6 +152,8 @@ export function ChatInput({
           <MicIcon size={24} />
         </button>
       )}
+    </div>
+      {footer && <div className="mt-2 flex justify-center">{footer}</div>}
     </div>
   );
 }

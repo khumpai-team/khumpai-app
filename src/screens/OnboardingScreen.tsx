@@ -16,8 +16,9 @@ import { useAppStore } from '@/store/appStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 import { MessageBubble } from '@/components/chat/MessageBubble';
+import { ChatInput } from '@/components/chat/ChatInput';
 import { readAttachment } from '@/lib/image';
-import { CheckIcon, EditIcon, SendIcon, PlusIcon } from '@/components/ui/icons';
+import { CheckIcon, EditIcon } from '@/components/ui/icons';
 
 type Msg = { id: string; role: 'khumpi' | 'user'; text: string; imageUrl?: string };
 type Step =
@@ -67,8 +68,6 @@ function parseMed(text: string): MedDraft {
   return { name, dose: dose || '850mg', schedule: schedule.length ? [...new Set(schedule)].sort() : ['08:00', '20:00'] };
 }
 
-const inputCls =
-  'flex-1 bg-transparent px-3 py-2 text-[16px] text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:shadow-none';
 const editCls =
   'w-full rounded-md border border-border bg-bg-base px-3 py-2 text-[16px] text-text-primary focus-visible:outline-cyan';
 
@@ -79,15 +78,14 @@ export function OnboardingScreen() {
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [step, setStep] = useState<Step>('name');
-  const [draft, setDraft] = useState('');
   const [caregiver, setCaregiver] = useState(false);
   const [patientName, setPatientName] = useState<string | null>(null);
   const [contact, setContact] = useState<ContactDraft | null>(null);
   const [med, setMed] = useState<MedDraft | null>(null);
   const [apptDate, setApptDate] = useState('');
+  const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const say = (text: string) => setMessages((m) => [...m, { id: uid('o'), role: 'khumpi', text }]);
   const me = (text: string) => setMessages((m) => [...m, { id: uid('o'), role: 'user', text }]);
@@ -114,11 +112,10 @@ export function OnboardingScreen() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, step]);
 
-  const submitText = () => {
-    const t = draft.trim();
+  const handleSend = (text: string) => {
+    const t = text.trim();
     if (!t) return;
     me(t);
-    setDraft('');
 
     if (step === 'name') {
       useAppStore.setState((s) => ({ user: { ...s.user, name: t } }));
@@ -214,7 +211,7 @@ export function OnboardingScreen() {
     <div className="flex h-full flex-col bg-bg-base">
       <header className="flex items-center gap-3 border-b border-border bg-bg-surface px-4 py-2.5">
         <span className="grid h-11 w-11 place-items-center">
-          <KhumpiAvatar state="happy" size={44} head />
+          <KhumpiAvatar state={listening ? 'listening' : 'happy'} size={44} head />
         </span>
         <p className="font-serif text-[17px] font-bold text-text-primary">{es.chat.assistantName}</p>
       </header>
@@ -254,69 +251,32 @@ export function OnboardingScreen() {
       </div>
 
       {/* bottom control region depends on the step */}
-      <div className="border-t border-border bg-bg-surface px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
-        {(step === 'name' || step === 'patientName' || step === 'contact' || step === 'med') && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*,application/pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) attach(f);
-                  e.target.value = '';
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                aria-label={es.chat.attachLabel}
-                className="press touch-target grid h-12 w-12 shrink-0 place-items-center rounded-full border border-border bg-bg-base text-text-secondary active:bg-bg-sunken"
-              >
-                <PlusIcon size={22} />
-              </button>
-              <label className="flex flex-1 cursor-text items-center rounded-full border border-border bg-bg-base px-2 transition-colors focus-within:border-border-strong">
-                <input
-                  className={inputCls}
-                  autoFocus
-                  value={draft}
-                  placeholder={
-                    step === 'name'
-                      ? es.onboarding.namePlaceholder
-                      : step === 'patientName'
-                        ? es.onboarding.patientPlaceholder
-                        : step === 'contact'
-                          ? es.onboarding.contactPlaceholder
-                          : es.onboarding.medPlaceholder
-                  }
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      submitText();
-                    }
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={submitText}
-                aria-label={es.onboarding.send}
-                className="touch-target grid h-12 w-12 place-items-center rounded-full btn-primary text-[color:var(--text-on-brand)] transition-transform active:scale-95"
-              >
-                <SendIcon size={22} />
-              </button>
-            </div>
-            {step === 'med' && (
-              <button type="button" onClick={skipMed} className="self-center py-1 text-sm font-semibold text-text-tertiary">
+      {step === 'name' || step === 'patientName' || step === 'contact' || step === 'med' ? (
+        // Text-entry steps reuse the chat composer — same mic + speech-to-text.
+        <ChatInput
+          onSend={handleSend}
+          onAttach={attach}
+          onListeningChange={setListening}
+          autoFocus
+          placeholder={
+            step === 'name'
+              ? es.onboarding.namePlaceholder
+              : step === 'patientName'
+                ? es.onboarding.patientPlaceholder
+                : step === 'contact'
+                  ? es.onboarding.contactPlaceholder
+                  : es.onboarding.medPlaceholder
+          }
+          footer={
+            step === 'med' ? (
+              <button type="button" onClick={skipMed} className="py-1 text-sm font-semibold text-text-tertiary">
                 {es.onboarding.skip}
               </button>
-            )}
-          </div>
-        )}
-
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="border-t border-border bg-bg-surface px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5">
         {step === 'mode' && (
           <div className="flex flex-col gap-2 pb-1">
             <button type="button" onClick={() => chooseMode(false)} className="touch-target rounded-full btn-primary py-3 text-[15px] font-bold text-[color:var(--text-on-brand)] active:scale-95">
@@ -358,7 +318,8 @@ export function OnboardingScreen() {
             {es.onboarding.start}
           </button>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
