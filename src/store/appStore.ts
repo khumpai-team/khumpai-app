@@ -64,6 +64,25 @@ interface AppActions {
 
 type KhumpaiStore = AppState & { actions: AppActions };
 
+// When the real (Foundry) provider is active, start with NO mock activity — the
+// server (Postgres) hydrates the real state on load (see hydrateFromServer).
+// Mock mode keeps the full seed so the offline demo has instant data.
+const MOCK_OFF = import.meta.env.VITE_AGENT_PROVIDER === 'foundry';
+const INITIAL_STATE: AppState = MOCK_OFF
+  ? {
+      ...SEED_STATE,
+      logs: [],
+      medications: [],
+      doctorNotes: [],
+      doctorVisits: [],
+      insights: [],
+      achievements: [],
+      syncQueue: [],
+      precomputedPackage: null,
+      chatHistory: [],
+    }
+  : SEED_STATE;
+
 // ---------------------------------------------------------------------------
 // Store implementation
 // ---------------------------------------------------------------------------
@@ -71,7 +90,7 @@ type KhumpaiStore = AppState & { actions: AppActions };
 export const useAppStore = create<KhumpaiStore>()(
   persist(
     (set, get) => ({
-      ...SEED_STATE,
+      ...INITIAL_STATE,
 
       actions: {
         addLog: (entry) => {
