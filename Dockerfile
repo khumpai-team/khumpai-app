@@ -27,4 +27,6 @@ ENV NODE_ENV=production
 ENV SPA_DIST=/app/dist
 EXPOSE 8787
 # Migrations/seed are a one-time step (see DEPLOY.md) — the container just serves.
-CMD ["npm", "start"]
+# Run node directly (not `npm start`): npm's wrapper buffers child stdout (hiding
+# logs) and adds an extra process layer that swallows signals in the container.
+CMD ["node", "--import", "tsx", "src/index.ts"]

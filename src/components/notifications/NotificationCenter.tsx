@@ -1,10 +1,11 @@
 // src/components/notifications/NotificationCenter.tsx
 /**
  * A floating bell on the right of the phone frame (below the screen header so
- * it never overlaps it). Shows an unread badge, opens a panel listing
- * notifications (newest first) with mark-read / per-item dismiss, an always-
- * visible X to close the panel, tap-outside-to-close, and the single
- * permission toggle that enables OS toasts.
+ * it never overlaps it). The bell only appears when there are notifications,
+ * and carries an always-visible X that clears them so it disappears entirely.
+ * Tapping the bell opens a panel listing notifications (newest first) with
+ * mark-read / per-item dismiss, a close X, tap-outside-to-close, and the
+ * single permission toggle that enables OS toasts.
  */
 import { useState } from 'react';
 import { es } from '@/data/i18n/es';
@@ -47,21 +48,35 @@ export function NotificationCenter() {
     void Notification.requestPermission().then((result) => setPermission(result));
   };
 
+  // Nothing to show → don't float a bell over the screen at all.
+  if (visible.length === 0) return null;
+
   return (
     <div className="absolute right-3 top-20 z-30">
-      <button
-        type="button"
-        aria-label={es.notifications.bell}
-        onClick={() => setOpen((v) => !v)}
-        className="relative z-30 grid h-10 w-10 place-items-center rounded-full bg-bg-base/90 text-lg shadow-soft-xl backdrop-blur"
-      >
-        🔔
-        {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] font-bold text-white">
-            {unread}
-          </span>
-        )}
-      </button>
+      <div className="relative z-30 inline-block">
+        <button
+          type="button"
+          aria-label={es.notifications.bell}
+          onClick={() => setOpen((v) => !v)}
+          className="grid h-10 w-10 place-items-center rounded-full bg-bg-base/90 text-lg shadow-soft-xl backdrop-blur"
+        >
+          🔔
+        </button>
+        {/* Always-visible X on the bell itself: clears the avisos so the whole
+            bell disappears. This is the "X para desaparecerlo" the user wants. */}
+        <button
+          type="button"
+          aria-label={es.notifications.dismissAll}
+          title={es.notifications.dismissAll}
+          onClick={(e) => {
+            e.stopPropagation();
+            dismissAll();
+          }}
+          className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-danger text-xs font-bold text-white shadow-soft"
+        >
+          ✕
+        </button>
+      </div>
 
       {/* Tap anywhere outside the panel to close it. */}
       {open && (
