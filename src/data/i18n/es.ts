@@ -342,6 +342,8 @@ export const es = {
   onboarding: {
     askName: '¡Hola! Soy Khumpi, tu compañera para cuidar tu azúcar 💚 ¿Cómo te llamas?',
     namePlaceholder: 'Tu nombre',
+    nameRetry: 'Perdona, no te entendí bien. ¿Me dices solo tu nombre? 🙂',
+    patientNameRetry: 'No te entendí bien. ¿Cómo se llama tu familiar?',
     askMode: (name: string) => `Mucho gusto, ${name}. ¿Para quién vamos a cuidar el azúcar?`,
     modeSelf: 'Para mí — tengo diabetes',
     modeFamily: 'Para un familiar',

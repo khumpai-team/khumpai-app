@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { es } from '@/data/i18n/es';
 import { uid } from '@/lib/id';
+import { extractPersonName } from '@/agent/extractName';
 import { useAppStore } from '@/store/appStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
@@ -46,8 +47,10 @@ interface MedDraft {
 function parseContact(text: string): ContactDraft {
   const phoneMatch = text.match(/(\+?\d[\d\s]{6,}\d)/);
   const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, ' ').trim() : '';
-  let name = text.replace(/(\+?\d[\d\s]{6,}\d)/, '').replace(/[,.;]/g, ' ').replace(/\s+/g, ' ').trim();
-  name = name.replace(/^(mi|a)\s+/i, '');
+  // Drop the phone, then extract just the person's name from the rest
+  // ("mi hija María" → "María"), instead of keeping the whole phrase.
+  const rest = text.replace(/(\+?\d[\d\s]{6,}\d)/, '').replace(/[,.;]/g, ' ').replace(/\s+/g, ' ').trim();
+  const name = extractPersonName(rest);
   return { name: name || 'Contacto', phone: phone || '' };
 }
 
@@ -64,7 +67,13 @@ function parseMed(text: string): MedDraft {
   }
   if (/maniana|mañana/i.test(text) && !schedule.includes('08:00')) schedule.push('08:00');
   if (/noche/i.test(text) && !schedule.includes('20:00')) schedule.push('20:00');
-  const name = (text.split(/\d/)[0] || 'Metformina').replace(/[,.]/g, '').trim() || 'Metformina';
+  // Name = the words before the first digit, minus leading verbs ("tomo…", "es…").
+  const name =
+    (text.split(/\d/)[0] || 'Metformina')
+      .replace(/[,.]/g, '')
+      .replace(/^\s*(me\s+)?(tomo|tomar|tomó|uso|usar|es|la|el|mi|una?)\s+/i, '')
+      .replace(/\s+/g, ' ')
+      .trim() || 'Metformina';
   return { name, dose: dose || '850mg', schedule: schedule.length ? [...new Set(schedule)].sort() : ['08:00', '20:00'] };
 }
 
@@ -118,18 +127,24 @@ export function OnboardingScreen() {
     me(t);
 
     if (step === 'name') {
-      useAppStore.setState((s) => ({ user: { ...s.user, name: t } }));
-      say(es.onboarding.askMode(t));
+      // Extract the real name from conversational input ("hola me llamo lucio"
+      // → "Lucio"); re-ask if nothing name-like was said.
+      const name = extractPersonName(t);
+      if (!name) { say(es.onboarding.nameRetry); return; }
+      useAppStore.setState((s) => ({ user: { ...s.user, name } }));
+      say(es.onboarding.askMode(name));
       setStep('mode');
     } else if (step === 'patientName') {
+      const name = extractPersonName(t);
+      if (!name) { say(es.onboarding.patientNameRetry); return; }
       // Relabel the data-rich seed patient as the cared-for person, so the
       // caregiver dashboard has real history to monitor from day one.
       useAppStore.setState((s) => ({
         persons: s.persons.map((p) =>
-          p.id === s.currentPersonId ? { ...p, name: t, relation: 'father' } : p,
+          p.id === s.currentPersonId ? { ...p, name, relation: 'father' } : p,
         ),
       }));
-      setPatientName(t);
+      setPatientName(name);
       say(es.onboarding.askContact);
       setStep('contact');
     } else if (step === 'contact') {
