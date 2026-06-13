@@ -68,14 +68,16 @@ agentRoute.post('/api/agent/chat', async (req, res) => {
       deployment: env.AZURE_OPENAI_DEPLOYMENT,
     });
     const createStream = (strict: boolean) => {
+      // Spec 2 scope: the model only drives the diary builder, so expose ONLY
+      // registerEntry. Exposing the other tools let the model call them and the
+      // client tool-router error on the unscoped calls.
+      const diaryTools = FOUNDRY_TOOL_DEFINITIONS.filter(
+        (t) => t.function.name === 'registerEntry',
+      );
       const tools = strict
-        ? FOUNDRY_TOOL_DEFINITIONS
+        ? diaryTools
         : // eslint-disable-next-line @typescript-eslint/no-explicit-any -- strip strict for fallback
-          FOUNDRY_TOOL_DEFINITIONS.map((t: any) =>
-            t.function?.name === 'registerEntry'
-              ? { ...t, function: { ...t.function, strict: false } }
-              : t,
-          );
+          diaryTools.map((t: any) => ({ ...t, function: { ...t.function, strict: false } }));
       return client.chat.completions.create({
         model: env.AZURE_OPENAI_DEPLOYMENT,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- looser shapes than SDK unions
