@@ -7,11 +7,15 @@
 import { Outlet } from 'react-router-dom';
 import { BottomNav } from '@/components/ui/BottomNav';
 import { PanicButton } from '@/components/ui/PanicButton';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { useNotificationScheduler } from '@/hooks/useNotificationScheduler';
 
 export function AppLayout() {
+  useNotificationScheduler();
   return (
     <div className="device-backdrop grain relative flex min-h-[100dvh] items-center justify-center sm:p-6">
       <div className="relative flex h-[100dvh] w-full max-w-phone flex-col overflow-hidden bg-bg-base sm:h-[860px] sm:max-h-[calc(100dvh-48px)] sm:rounded-[44px] sm:border sm:border-border sm:shadow-soft-xl">
+        <NotificationCenter />
         <main className="relative flex-1 overflow-hidden">
           <Outlet />
         </main>
