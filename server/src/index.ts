@@ -2,6 +2,7 @@ import { initTelemetry } from './telemetry.js';
 initTelemetry();
 
 import express from 'express';
+import path from 'node:path';
 import { env } from './env.js';
 import { stateRoute } from './http/state.route.js';
 import { logsRoute } from './http/logs.route.js';
@@ -23,6 +24,18 @@ export function createApp() {
   app.use(logsRoute);
   app.use(entitiesRoute);
   app.use(agentRoute);
+
+  // Production single-origin: serve the built SPA from dist/ (set SPA_DIST in
+  // prod; in dev the Vite server serves the SPA + proxies /api, so this is off).
+  const distDir = process.env.SPA_DIST;
+  if (distDir) {
+    app.use(express.static(distDir));
+    app.use((req, res, next) => {
+      if (req.path.startsWith('/api')) { next(); return; }
+      res.sendFile(path.join(distDir, 'index.html'));
+    });
+  }
+
   return app;
 }
 
