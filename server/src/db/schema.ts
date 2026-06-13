@@ -87,3 +87,11 @@ export const emergencyContacts = pgTable('emergency_contacts', {
   relation: text('relation').notNull(),
   isCaregiverUser: boolean('is_caregiver_user').notNull().default(false),
 });
+
+export const knowledge = pgTable('knowledge', {
+  id: text('id').primaryKey(),
+  topic: text('topic').notNull(),
+  content: text('content').notNull(),
+  source: text('source').notNull(),
+  sourceUrl: text('source_url'),
+});
