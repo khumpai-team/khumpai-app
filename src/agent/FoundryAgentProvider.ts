@@ -385,12 +385,17 @@ export class FoundryAgentProvider implements AgentProvider {
   // streamText — emit a deterministic message as text_start / deltas / end
   // -------------------------------------------------------------------------
 
-  /** Stream a local (non-model) message word by word, mirroring the SSE path. */
+  /**
+   * Stream a local (non-model) message word by word, mirroring the SSE path.
+   * The per-word delay is what makes it visibly stream: the UI fills text as
+   * deltas arrive, so without pacing the whole message would pop in at once.
+   */
   private async *streamText(text: string): AsyncGenerator<AgentEvent> {
     const messageId = uid('msg');
     yield { type: 'text_start', messageId };
     for (const w of text.split(/(\s+)/)) {
       yield { type: 'text_delta', messageId, delta: w };
+      if (w.trim()) await new Promise<void>((r) => setTimeout(r, 28));
     }
     yield { type: 'text_end', messageId };
   }
