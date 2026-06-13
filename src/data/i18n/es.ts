@@ -222,6 +222,10 @@ export const es = {
     achievementTitle: 'Vas muy bien',
     achievementBody: 'Sigue cuidándote así — cada registro cuenta. 🌟',
     caregiverTitle: 'Atención',
+    // Caregiver notification bodies reuse the existing es.caregiver.* strings
+    // (alertHigh / alertStock), so there is intentionally no caregiverBody here.
+    // redFlagTitle takes the red-flag LEVEL (urgent | emergency) to vary the
+    // wording; the notification's severity is always 'urgent' regardless.
     redFlagTitle: (level: 'urgent' | 'emergency') =>
       level === 'emergency' ? 'Atención urgente' : 'Conviene revisar',
   },

@@ -390,6 +390,10 @@ export interface AppState {
 
 // ---------------------------------------------------------------------------
 // Notifications (in-app reminder system)
+//
+// Notifications are NOT part of AppState: like pill stock (usePillboxStore),
+// they live in a dedicated store (useNotificationStore) since they are a
+// UI/session concern, not authoritative health data.
 // ---------------------------------------------------------------------------
 
 export type NotificationKind =
