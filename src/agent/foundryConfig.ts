@@ -70,94 +70,91 @@ based insights drawn from their own data.
 // Tool definitions (15 tools mirroring src/agent/tools/index.ts)
 // ---------------------------------------------------------------------------
 
-/** JSON-schema tool definitions for the Foundry agent (OpenAI chat.completions format). */
-export const FOUNDRY_TOOL_DEFINITIONS = [
-  {
-    type: 'function',
-    function: {
-      name: 'registerEntry' as const,
+/**
+ * Stable few-shot guidance for diary extraction — part of the cacheable system
+ * prefix (no dynamic content) so Azure prompt caching stays warm.
+ */
+export const DIARY_FEWSHOTS = `
+## Ejemplos de extracción (registerEntry)
+- "cené arroz con pollo y me salió 160" → entry meal {description:"arroz con pollo", context:"casa"}, secondaryEntry glucose {value:160, moment:"post-cena"}.
+- "ayer en ayunas me salió 130" → entry glucose {value:130, moment:"ayunas"}, timestamp = ayer (desde "Contexto actual").
+- "dormí 5 horas" → entry sleep {hours:5}.
+- "ya tomé mi metformina" → entry medication {name:"Metformina", taken:true}.
+`.trim();
+
+// ---------------------------------------------------------------------------
+// Strict registerEntry tool — anyOf per entry type guarantees the payload shape
+// ---------------------------------------------------------------------------
+
+const entryVariant = (
+  type: string,
+  payloadProps: Record<string, unknown>,
+  payloadRequired: string[],
+) => ({
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'timestamp', 'payload'],
+  properties: {
+    type: { type: 'string', enum: [type] },
+    timestamp: {
+      type: 'string',
       description:
-        'Propose a new health log entry (glucose, meal, sleep, medication, or symptom) for the patient to confirm before it is persisted.',
-      parameters: {
-        type: 'object',
-        properties: {
-          entry: {
-            type: 'object',
-            description: 'The draft health log entry to register.',
-            properties: {
-              type: {
-                type: 'string',
-                enum: ['glucose', 'meal', 'sleep', 'medication', 'symptom'],
-              },
-              timestamp: {
-                type: 'string',
-                format: 'date-time',
-                description:
-                  'ISO 8601 timestamp of when the event actually happened. Use the current date/time from the system context. For relative phrases ("esta mañana", "ayer", "anoche") compute it from that current date — never invent a year.',
-              },
-              payload: {
-                type: 'object',
-                description:
-                  'Type-specific fields. Use EXACTLY these field names per type — glucose: { value, moment }; meal: { description, context }; sleep: { hours }; medication: { name, taken }; symptom: { description }.',
-                properties: {
-                  value: { type: 'number', description: 'glucose reading in mg/dL (glucose entries)' },
-                  moment: {
-                    type: 'string',
-                    enum: ['ayunas', 'post-desayuno', 'post-almuerzo', 'post-cena'],
-                    description: 'when the glucose reading was taken (glucose entries)',
-                  },
-                  description: { type: 'string', description: 'free text for meal or symptom entries' },
-                  context: {
-                    type: 'string',
-                    enum: ['casa', 'fuera'],
-                    description: 'where the meal was eaten (meal entries)',
-                  },
-                  hours: { type: 'number', description: 'hours slept (sleep entries)' },
-                  name: { type: 'string', description: 'medication name (medication entries)' },
-                  taken: { type: 'boolean', description: 'whether the medication was taken (medication entries)' },
-                },
-              },
-            },
-            required: ['type', 'timestamp', 'payload'],
-          },
-          secondaryEntry: {
-            type: 'object',
-            description:
-              'Optional second entry recorded in the same message (e.g. meal + glucose). Same structure and field-name rules as `entry`.',
-            properties: {
-              type: {
-                type: 'string',
-                enum: ['glucose', 'meal', 'sleep', 'medication', 'symptom'],
-              },
-              timestamp: { type: 'string', format: 'date-time' },
-              payload: {
-                type: 'object',
-                description: 'Same field-name rules as entry.payload.',
-                properties: {
-                  value: { type: 'number' },
-                  moment: {
-                    type: 'string',
-                    enum: ['ayunas', 'post-desayuno', 'post-almuerzo', 'post-cena'],
-                  },
-                  description: { type: 'string' },
-                  context: { type: 'string', enum: ['casa', 'fuera'] },
-                  hours: { type: 'number' },
-                  name: { type: 'string' },
-                  taken: { type: 'boolean' },
-                },
-              },
-            },
-            required: ['type', 'timestamp', 'payload'],
-          },
-          ack: {
-            type: 'string',
-            description: 'Warm acknowledgement to stream after the user confirms.',
-          },
+        'ISO 8601 of when it happened. Use the datetime in "Contexto actual"; compute "esta mañana/ayer/anoche" from it — never invent a year.',
+    },
+    payload: {
+      type: 'object',
+      additionalProperties: false,
+      required: payloadRequired,
+      properties: payloadProps,
+    },
+  },
+});
+
+const ENTRY_VARIANTS = [
+  entryVariant(
+    'glucose',
+    {
+      value: { type: 'number', description: 'mg/dL' },
+      moment: { type: 'string', enum: ['ayunas', 'post-desayuno', 'post-almuerzo', 'post-cena'] },
+    },
+    ['value', 'moment'],
+  ),
+  entryVariant(
+    'meal',
+    { description: { type: 'string' }, context: { type: 'string', enum: ['casa', 'fuera'] } },
+    ['description', 'context'],
+  ),
+  entryVariant('sleep', { hours: { type: 'number' } }, ['hours']),
+  entryVariant('medication', { name: { type: 'string' }, taken: { type: 'boolean' } }, ['name', 'taken']),
+  entryVariant('symptom', { description: { type: 'string' } }, ['description']),
+];
+
+const REGISTER_ENTRY_TOOL = {
+  type: 'function',
+  function: {
+    name: 'registerEntry' as const,
+    strict: true,
+    description:
+      'Extract a health log entry (glucose, meal, sleep, medication, or symptom) from the patient message, for the user to confirm before it is saved.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['entry', 'secondaryEntry', 'ack'],
+      properties: {
+        entry: { anyOf: ENTRY_VARIANTS },
+        secondaryEntry: { anyOf: [...ENTRY_VARIANTS, { type: 'null' }] },
+        ack: {
+          type: 'string',
+          description: 'Warm Peruvian-Spanish acknowledgement shown after the user confirms.',
         },
-        required: ['entry', 'ack'],
       },
     },
   },
+};
+
+/** JSON-schema tool definitions for the Foundry agent (OpenAI chat.completions format). */
+export const FOUNDRY_TOOL_DEFINITIONS = [
+  REGISTER_ENTRY_TOOL,
   {
     type: 'function',
     function: {
@@ -416,4 +413,4 @@ export const FOUNDRY_TOOL_DEFINITIONS = [
       },
     },
   },
-] as const;
+];
