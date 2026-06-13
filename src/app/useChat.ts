@@ -22,6 +22,7 @@ import {
 import { ackForEntries } from '@/agent/ack';
 import { getOfflineResponse } from '@/agent/offlineResponses';
 import { offlineEducationAnswer } from '@/agent/offlineEducation';
+import { looksLikeFoodLog } from '@/agent/offlineLog';
 import { recordSuggestion } from '@/lib/prefs';
 import { readAttachment } from '@/lib/image';
 import { evaluateAchievements } from '@/lib/achievements';
@@ -509,13 +510,20 @@ export function useChat() {
           return;
         }
 
-        // 2. A data entry (glucose/meal/symptom/…) → local confirmation card,
-        //    queued for sync. Handled before the digest so a loggable statement
-        //    is never answered with a general snippet.
-        if (isDataIntent(intent)) {
+        // 2. A data entry → local confirmation card, queued for sync. Handled
+        //    before the digest so a loggable statement is never answered with a
+        //    general snippet. Bare foods ("pan con palta", no verb) count too:
+        //    the regex parser misses them, so we detect them here.
+        const foodDesc = !isDataIntent(intent) ? looksLikeFoodLog(trimmed) : null;
+        const logIntent: DataIntent | null = isDataIntent(intent)
+          ? intent
+          : foodDesc
+            ? { kind: 'meal', context: 'casa', description: foodDesc }
+            : null;
+        if (logIntent) {
           chat.setThinking(false);
-          const draft = buildDraftEntries(intent, app.currentPersonId);
-          presentOfflineCard(draft, getOfflineResponse(intent, app.user.name));
+          const draft = buildDraftEntries(logIntent, app.currentPersonId);
+          presentOfflineCard(draft, getOfflineResponse(logIntent, app.user.name));
           return;
         }
 
@@ -534,8 +542,9 @@ export function useChat() {
           return;
         }
 
-        // 4. Nothing matched — warm acknowledgement (never invents advice).
-        await streamSay(getOfflineResponse(intent, app.user.name));
+        // 4. Nothing matched — warm acknowledgement, plus a hint about what
+        //    Khumpi CAN answer from its pre-charged knowledge while offline.
+        await streamSay(`${getOfflineResponse(intent, app.user.name)} ${es.offline.canHelpWith}`);
         return;
       }
 

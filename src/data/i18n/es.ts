@@ -314,6 +314,10 @@ export const es = {
     reconnectMsg: 'Ya vi todo lo que me contaste sin señal 💚 Todo guardado.',
     emergencyLine: (name: string, phone: string) =>
       `Si te sientes mal, avisa a ${name}: ${phone}.`,
+    // Shown when offline and Khumpi has nothing in its pre-charged digest for
+    // the question — so it tells the user what it CAN help with offline.
+    canHelpWith:
+      'Sin conexión te puedo contar sobre: 🍽️ alimentación y qué comer · 🦶 cuidado de los pies · 🚶 ejercicio · 🍰 postres y fiestas · 🍴 comer fuera de casa · 💊 tus pastillas. Pregúntame sobre cualquiera 🙂',
   },
 
   achievements: {

@@ -475,4 +475,38 @@ export const KNOWLEDGE_OFFLINE: OfflineKnowledgeEntry[] = [
       'La mejor bebida es el agua. Evita las gaseosas y los jugos envasados, que tienen mucha azúcar. Si quieres algo con sabor, prueba agua con un toque de limón o infusiones sin azúcar.',
     source: 'Guía clínica (MINSA)',
   },
+
+  // ── Conceptos básicos (las preguntas más comunes) ─────────────────
+  {
+    id: 'off-basico-diabetes',
+    topic: 'qué es la diabetes',
+    keywords: ['que es la diabetes', 'diabetes', 'que es diabetes', 'enfermedad', 'glucosa', 'azucar en la sangre', 'que tengo'],
+    content:
+      'La diabetes tipo 2 es cuando el azúcar (glucosa) en tu sangre se mantiene más alta de lo normal porque el cuerpo no usa bien la insulina. Se controla muy bien con buena alimentación, actividad física, tus pastillas y chequeos regulares. No estás solo en esto. 💚',
+    source: 'Guías de diabetes',
+  },
+  {
+    id: 'off-azucar-manana',
+    topic: 'azúcar alta en la mañana',
+    keywords: ['manana', 'en la manana', 'amanecer', 'amanezco', 'al despertar', 'madrugada', 'sube en la manana', 'alta en ayunas', 'por que sube'],
+    content:
+      'Es común que el azúcar esté más alta en la mañana: de madrugada el cuerpo libera hormonas que la suben (lo llaman "fenómeno del amanecer"). Dormir bien, cenar temprano y ligero, y caminar un poco después de cenar pueden ayudar. Si sigue muy alta varios días, coméntalo con tu médico.',
+    source: 'Guías de diabetes',
+  },
+  {
+    id: 'off-meta-azucar',
+    topic: 'meta de azúcar',
+    keywords: ['ayunas', 'rango', 'valor normal', 'cuanto debe', 'cuanto deberia', 'meta', 'nivel normal', 'cuanto es normal'],
+    content:
+      'Cada persona tiene una meta de azúcar distinta; tu médico te dice cuál es la tuya. En general se busca mantenerla estable, ni muy alta ni muy baja. Lleva tu registro de mediciones a la consulta para que la ajusten contigo.',
+    source: 'Guías de diabetes',
+  },
+  {
+    id: 'off-sed',
+    topic: 'sed y orinar seguido',
+    keywords: ['sed', 'mucha sed', 'tengo sed', 'orino', 'orinar', 'boca seca', 'tomar mucha agua'],
+    content:
+      'Tener mucha sed o ir muy seguido al baño puede pasar cuando el azúcar está alta. Toma agua (no gaseosas), mídete el azúcar si puedes, y si te pasa muy seguido cuéntaselo a tu médico.',
+    source: 'Guías de diabetes',
+  },
 ];
