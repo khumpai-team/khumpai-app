@@ -21,7 +21,7 @@ import {
 } from '@/agent/tools';
 import { ackForEntries } from '@/agent/ack';
 import { getOfflineResponse } from '@/agent/offlineResponses';
-import { queryRag } from '@/agent/tools/queryRag';
+import { offlineEducationAnswer } from '@/agent/offlineEducation';
 import { recordSuggestion } from '@/lib/prefs';
 import { readAttachment } from '@/lib/image';
 import { evaluateAchievements } from '@/lib/achievements';
@@ -502,21 +502,23 @@ export function useChat() {
         await sleep(450);
 
         // Offline education: answer from the bundled digest (no network).
-        if (isEducationQuestion(trimmed)) {
-          const hit = queryRag(trimmed);
-          if (hit) {
-            const id = uid('msg');
-            chat.setThinking(false);
-            chat.addMessage({ id, kind: 'message', role: 'khumpi', text: '', streaming: true });
-            const body = `Sin conexión, pero esto es lo que sé: ${hit.content}`;
-            for (const w of body.split(/(\s+)/)) {
-              chat.appendDelta(id, w);
-              if (w.trim()) await sleep(18);
-            }
-            chat.attachSources(id, [{ source: hit.source }]);
-          } else {
-            await streamSay(getOfflineResponse(intent, app.user.name));
+        const eduResult = offlineEducationAnswer(trimmed);
+        if (eduResult !== null) {
+          const id = uid('msg');
+          chat.setThinking(false);
+          chat.addMessage({ id, kind: 'message', role: 'khumpi', text: '', streaming: true });
+          for (const w of eduResult.body.split(/(\s+)/)) {
+            chat.appendDelta(id, w);
+            if (w.trim()) await sleep(18);
           }
+          chat.attachSources(id, [{ source: eduResult.source }]);
+          return;
+        }
+
+        // Not an education question — fall through to data-intent / warm-ack.
+        if (isEducationQuestion(trimmed)) {
+          // queryRag returned null inside the helper; give warm offline fallback.
+          await streamSay(getOfflineResponse(intent, app.user.name));
           return;
         }
 
