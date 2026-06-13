@@ -103,7 +103,25 @@ export function ChatInput({
         />
       </label>
 
-      {canSend ? (
+      {listening ? (
+        // Listening → a clear STOP button (stays put even as text streams in).
+        <button
+          type="button"
+          onClick={toggleMic}
+          aria-label={es.chat.micStop}
+          aria-pressed
+          className="press touch-target relative grid h-12 w-12 shrink-0 place-items-center rounded-full text-[color:var(--text-on-brand)]"
+          style={{ background: 'var(--deep-blue)', boxShadow: 'var(--shadow-cyan)' }}
+        >
+          <motion.span
+            className="absolute inset-0 rounded-full"
+            style={{ background: 'var(--cyan)' }}
+            animate={{ scale: [1, 1.55], opacity: [0.45, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
+          />
+          <span className="relative h-3.5 w-3.5 rounded-[3px] bg-current" />
+        </button>
+      ) : canSend ? (
         <button
           type="button"
           onClick={send}
@@ -116,19 +134,10 @@ export function ChatInput({
         <button
           type="button"
           onClick={toggleMic}
-          aria-label={listening ? es.chat.micStop : es.chat.micLabel}
-          aria-pressed={listening}
-          className="press touch-target relative grid h-12 w-12 shrink-0 place-items-center rounded-full text-[color:var(--text-on-brand)]"
-          style={{ background: listening ? 'var(--deep-blue)' : 'var(--grad-cyan)', boxShadow: 'var(--shadow-cyan)' }}
+          aria-label={es.chat.micLabel}
+          className="press touch-target grid h-12 w-12 shrink-0 place-items-center rounded-full text-[color:var(--text-on-brand)]"
+          style={{ background: 'var(--grad-cyan)', boxShadow: 'var(--shadow-cyan)' }}
         >
-          {listening && (
-            <motion.span
-              className="absolute inset-0 rounded-full"
-              style={{ background: 'var(--cyan)' }}
-              animate={{ scale: [1, 1.55], opacity: [0.45, 0] }}
-              transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
-            />
-          )}
           <MicIcon size={24} />
         </button>
       )}

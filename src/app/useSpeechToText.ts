@@ -1,12 +1,15 @@
 /**
  * useSpeechToText — thin wrapper over the browser Web Speech API
  * (SpeechRecognition). Zero backend, on-device, Peruvian Spanish (es-PE).
- * Streams interim results so the composer fills in live.
+ *
+ * Press-to-start / press-to-stop: recognition runs CONTINUOUSLY and auto-restarts
+ * through the engine's silence timeouts until the caller calls stop(). Interim
+ * results stream live; finalized text accumulates across restarts so a long
+ * dictation isn't lost when the engine cycles.
  *
  * `supported` is false where the API is absent (Firefox / older Safari) — the
- * caller can fall back. To upgrade to production-grade, cross-browser accuracy,
- * replace the engine with Azure Speech (Cognitive Services) or a Whisper
- * transcription endpoint behind this same { supported, start, stop } interface.
+ * caller can fall back. Production/cross-browser upgrade: swap the engine for
+ * Azure Speech behind this same { supported, start, stop } interface.
  */
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -28,11 +31,13 @@ function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
   return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
 }
 
+const join = (...parts: string[]) => parts.map((p) => p.trim()).filter(Boolean).join(' ');
+
 export interface UseSpeechToTextOptions {
   lang?: string;
-  /** Called with the transcript so far (interim updates, then the final). */
+  /** Called with the full transcript so far (accumulated finals + live interim). */
   onResult: (transcript: string, isFinal: boolean) => void;
-  /** Mirrors the listening lifecycle (start/stop/end/error). */
+  /** Mirrors the listening lifecycle (start → true; stop/fatal error → false). */
   onListeningChange?: (listening: boolean) => void;
 }
 
@@ -44,12 +49,79 @@ export function useSpeechToText(opts: UseSpeechToTextOptions): {
   const { lang = 'es-PE' } = opts;
   const optsRef = useRef(opts);
   optsRef.current = opts;
+
   const recRef = useRef<SpeechRecognitionLike | null>(null);
+  const shouldListenRef = useRef(false); // true between start() and stop()
+  const finalizedRef = useRef(''); // committed text from prior (ended) sessions
+  const sessionFinalRef = useRef(''); // finalized text within the current session
 
   const Ctor = getRecognitionCtor();
   const supported = !!Ctor;
 
+  const launch = useCallback(() => {
+    if (!Ctor) return;
+    const rec = new Ctor();
+    rec.lang = lang;
+    rec.interimResults = true;
+    rec.continuous = true;
+    sessionFinalRef.current = '';
+
+    rec.onresult = (e: any) => {
+      let interim = '';
+      let final = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) final += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      sessionFinalRef.current = final;
+      const text = join(finalizedRef.current, final, interim);
+      if (text) optsRef.current.onResult(text, false);
+    };
+
+    rec.onend = () => {
+      // Commit this session's finalized text, then keep going if not stopped.
+      finalizedRef.current = join(finalizedRef.current, sessionFinalRef.current);
+      sessionFinalRef.current = '';
+      if (shouldListenRef.current) {
+        try {
+          launch();
+        } catch {
+          shouldListenRef.current = false;
+          optsRef.current.onListeningChange?.(false);
+        }
+      } else {
+        optsRef.current.onListeningChange?.(false);
+      }
+    };
+
+    rec.onerror = (ev: any) => {
+      // Permission errors are fatal; transient ones (no-speech) let onend restart.
+      if (ev?.error === 'not-allowed' || ev?.error === 'service-not-allowed') {
+        shouldListenRef.current = false;
+        optsRef.current.onListeningChange?.(false);
+      }
+    };
+
+    recRef.current = rec;
+    rec.start();
+  }, [Ctor, lang]);
+
+  const start = useCallback(() => {
+    if (!Ctor) return;
+    finalizedRef.current = '';
+    shouldListenRef.current = true;
+    try {
+      launch();
+      optsRef.current.onListeningChange?.(true);
+    } catch {
+      shouldListenRef.current = false;
+      optsRef.current.onListeningChange?.(false);
+    }
+  }, [Ctor, launch]);
+
   const stop = useCallback(() => {
+    shouldListenRef.current = false;
     try {
       recRef.current?.stop();
     } catch {
@@ -58,36 +130,9 @@ export function useSpeechToText(opts: UseSpeechToTextOptions): {
     optsRef.current.onListeningChange?.(false);
   }, []);
 
-  const start = useCallback(() => {
-    if (!Ctor) return;
-    const rec = new Ctor(); // fresh per session for reliability
-    rec.lang = lang;
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.onresult = (e: any) => {
-      let interim = '';
-      let final = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) final += r[0].transcript;
-        else interim += r[0].transcript;
-      }
-      const text = (final || interim).trim();
-      if (text) optsRef.current.onResult(text, Boolean(final));
-    };
-    rec.onend = () => optsRef.current.onListeningChange?.(false);
-    rec.onerror = () => optsRef.current.onListeningChange?.(false);
-    recRef.current = rec;
-    try {
-      rec.start();
-      optsRef.current.onListeningChange?.(true);
-    } catch {
-      optsRef.current.onListeningChange?.(false);
-    }
-  }, [Ctor, lang]);
-
   useEffect(
     () => () => {
+      shouldListenRef.current = false;
       try {
         recRef.current?.abort?.();
       } catch {
