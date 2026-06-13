@@ -208,6 +208,24 @@ export const es = {
     talk: 'Escribir a Khumpi',
   },
 
+  notifications: {
+    bell: 'Avisos',
+    empty: 'No tienes avisos por ahora 💙',
+    enable: 'Activar avisos',
+    enabled: 'Avisos activados',
+    markAllRead: 'Marcar como leídos',
+    dismiss: 'Descartar',
+    medicationTitle: 'Hora de tu medicina',
+    medicationBody: (name: string) => `Es hora de tomar ${name}. 💊`,
+    checkinTitle: '¿Cómo amaneciste?',
+    checkinBody: 'Cuéntame cómo te sientes hoy. Estoy aquí para acompañarte. 💙',
+    achievementTitle: 'Vas muy bien',
+    achievementBody: 'Sigue cuidándote así — cada registro cuenta. 🌟',
+    caregiverTitle: 'Atención',
+    redFlagTitle: (level: 'urgent' | 'emergency') =>
+      level === 'emergency' ? 'Atención urgente' : 'Conviene revisar',
+  },
+
   pillbox: {
     title: 'Tu pastillero',
     subtitle: 'Tus pastillas y cuándo tomarlas',
