@@ -6,6 +6,7 @@ import { env } from '../env.js';
 import { FOUNDRY_TOOL_DEFINITIONS } from '../../../src/agent/foundryConfig';
 import { db, schema } from '../db/client.js';
 import { buildAgentMessages } from './buildMessages.js';
+import { screenInput } from './contentSafety.js';
 
 export const agentRoute = Router();
 
@@ -59,6 +60,38 @@ agentRoute.post('/api/agent/chat', async (req, res) => {
     /* context is best-effort; proceed without it */
   }
   const messages = buildAgentMessages({ history, patientContext, nowIso: new Date().toISOString() });
+
+  // Defense-in-depth: server-side input moderation (Azure AI Content Safety).
+  // Extracts the latest user message text (handles both string and vision-array content).
+  // DORMANT (fail-open) when CONTENT_SAFETY_ENDPOINT/KEY are not set.
+  const latestUserMsg = [...history].reverse().find((m) => m.role === 'user');
+  if (latestUserMsg) {
+    const rawContent = latestUserMsg.content;
+    const latestUserText =
+      typeof rawContent === 'string'
+        ? rawContent
+        : Array.isArray(rawContent)
+          ? rawContent
+              .map((part) => {
+                const p = part as { type?: string; text?: string };
+                return p.type === 'text' && typeof p.text === 'string' ? p.text : '';
+              })
+              .join(' ')
+              .trim()
+          : '';
+    if (latestUserText) {
+      const screen = await screenInput(latestUserText);
+      if (screen.blocked) {
+        send({
+          type: 'text',
+          delta:
+            'Mejor hablemos de tu salud — tu azúcar, comidas, descanso o cómo te sientes. ¿Qué quieres anotar hoy?',
+        });
+        done();
+        return;
+      }
+    }
+  }
 
   try {
     const client = new AzureOpenAI({

@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@azure-rest/ai-content-safety": "^1.0.1",
     "@azure/monitor-opentelemetry": "^1.18.1",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.36.0",
