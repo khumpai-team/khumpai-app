@@ -21,6 +21,13 @@ export function NotificationCenter() {
 
   const visible = notifications.filter((n) => n.status !== 'dismissed');
   const unread = unreadCount(notifications);
+  const urgent = visible.filter((n) => n.severity === 'urgent' && n.status !== 'read');
+
+  const markAllRead = () => {
+    visible
+      .filter((n) => n.status === 'pending' || n.status === 'shown')
+      .forEach((n) => markRead(n.id));
+  };
 
   // Only offer the toggle when the browser can still be asked (permission ===
   // 'default'); once granted/denied the prompt is a no-op, so we hide it.
@@ -51,7 +58,7 @@ export function NotificationCenter() {
         <div className="mt-2 max-h-[60vh] w-72 overflow-y-auto rounded-lg border border-border bg-bg-base p-2 shadow-soft-xl">
           <div className="mb-2 flex items-center justify-between px-1">
             <p className="text-sm font-bold text-text-primary">{es.notifications.bell}</p>
-            {canEnableToasts && (
+            {canEnableToasts ? (
               <button
                 type="button"
                 onClick={enableToasts}
@@ -59,8 +66,28 @@ export function NotificationCenter() {
               >
                 {es.notifications.enable}
               </button>
-            )}
+            ) : permission === 'granted' ? (
+              <span className="text-xs font-semibold text-text-tertiary">
+                {es.notifications.enabled}
+              </span>
+            ) : null}
           </div>
+
+          {urgent.length > 0 && (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-md border-l-2 border-danger bg-danger/10 px-2 py-1.5">
+              <p className="text-xs font-bold text-danger">{urgent[0].title}</p>
+            </div>
+          )}
+
+          {unread > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              className="mb-1.5 ml-auto block text-xs font-semibold text-deep-blue"
+            >
+              {es.notifications.markAllRead}
+            </button>
+          )}
 
           {visible.length === 0 ? (
             <p className="px-1 py-4 text-center text-sm text-text-secondary">
