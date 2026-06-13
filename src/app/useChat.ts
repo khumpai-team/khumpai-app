@@ -18,6 +18,7 @@ import {
   guardrailRedirect,
   type DraftEntries,
 } from '@/agent/tools';
+import { ackForEntries } from '@/agent/ack';
 import { recordSuggestion } from '@/lib/prefs';
 import { readAttachment } from '@/lib/image';
 import { evaluateOfflineRules } from '@/lib/offlineRules';
@@ -36,35 +37,6 @@ const isDataIntent = (i: ParsedIntent): i is DataIntent =>
 
 const norm = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-
-/** Range-aware glucose acknowledgement. */
-function glucoseMsg(v: number): string {
-  if (v < 70) return AGENT_ES.glucose.low(v);
-  if (v < 180) return AGENT_ES.glucose.ok(v);
-  if (v < 250) return AGENT_ES.glucose.high(v);
-  return AGENT_ES.glucose.veryHigh(v);
-}
-
-/** Warm acknowledgement for a confirmed draft (local, no agent). */
-function localAck(draft: DraftEntries): string {
-  const e = draft.primary;
-  switch (e.type) {
-    case 'glucose':
-      return glucoseMsg(e.payload.value);
-    case 'meal':
-      return draft.secondary?.type === 'glucose'
-        ? glucoseMsg(draft.secondary.payload.value)
-        : AGENT_ES.confirmations.savedMeal;
-    case 'sleep':
-      return e.payload.hours < 6 ? AGENT_ES.offline.sleepShort(e.payload.hours) : AGENT_ES.confirmations.savedSleep;
-    case 'medication':
-      return AGENT_ES.confirmations.savedMedication;
-    case 'symptom':
-      return evaluateRedFlag(e.payload.description).message;
-    default:
-      return AGENT_ES.confirmations.saved;
-  }
-}
 
 /** Resolve which patient a caregiver entry is for (by name, relation, or default). */
 function resolveTargetPerson(intent: DataIntent, text: string, persons: Person[]): Person | undefined {
@@ -340,7 +312,7 @@ export function useChat() {
   // Build a confirmation card locally (no agent) and remember its ack so
   // confirm streams the right reply. Shared by caregiver logging + attachments.
   const presentLocalCard = useCallback((draft: DraftEntries) => {
-    const ack = localAck(draft);
+    const ack = ackForEntries(draft.primary, draft.secondary);
     const callId = uid('call');
     localAckRef.current.set(callId, ack);
     const args: RegisterEntryArgs = { entry: draft.primary, secondaryEntry: draft.secondary, ack };

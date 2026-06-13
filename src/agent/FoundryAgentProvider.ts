@@ -21,6 +21,8 @@ import type {
 } from '@/agent/AgentProvider';
 import { TOOL_BUDGET } from '@/agent/tools';
 import { runClientTool } from '@/agent/clientToolRouter';
+import { ackForEntries } from '@/agent/ack';
+import { AGENT_ES } from '@/data/i18n/agent-es';
 import { useAppStore } from '@/store/appStore';
 import type { LogEntry } from '@/types';
 
@@ -357,7 +359,39 @@ export class FoundryAgentProvider implements AgentProvider {
       }),
     });
 
-    // Resume the turn loop from where it left off
-    yield* this.runTurnLoop(messages);
+    // Resume the turn loop, but guarantee a friendly completion message: a
+    // confirmed entry must always be acknowledged out loud, even if the model
+    // stays silent (emits another tool call, empty text, or the request fails).
+    // We watch the resumed turn for any text and hold back its terminal `done`
+    // so a deterministic fallback can be injected before we finish the turn.
+    let sawText = false;
+    for await (const ev of this.runTurnLoop(messages)) {
+      if (ev.type === 'done') break;
+      if (ev.type === 'text_start' || ev.type === 'text_delta') sawText = true;
+      yield ev;
+    }
+
+    if (result.ok && !sawText) {
+      const [primary, secondary] = result.savedEntries ?? [];
+      yield* this.streamText(
+        primary ? ackForEntries(primary, secondary) : AGENT_ES.confirmations.savedLong,
+      );
+    }
+
+    yield { type: 'done' };
+  }
+
+  // -------------------------------------------------------------------------
+  // streamText — emit a deterministic message as text_start / deltas / end
+  // -------------------------------------------------------------------------
+
+  /** Stream a local (non-model) message word by word, mirroring the SSE path. */
+  private async *streamText(text: string): AsyncGenerator<AgentEvent> {
+    const messageId = uid('msg');
+    yield { type: 'text_start', messageId };
+    for (const w of text.split(/(\s+)/)) {
+      yield { type: 'text_delta', messageId, delta: w };
+    }
+    yield { type: 'text_end', messageId };
   }
 }

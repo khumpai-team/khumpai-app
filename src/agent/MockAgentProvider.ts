@@ -18,7 +18,8 @@ import type {
   ToolResult,
 } from '@/agent/AgentProvider';
 import { parseMessage } from '@/agent/parse';
-import { buildDraftEntries, evaluateRedFlag, guardrailRedirect, type DraftEntries } from '@/agent/tools';
+import { buildDraftEntries, guardrailRedirect } from '@/agent/tools';
+import { ackForEntries } from '@/agent/ack';
 import type { LogEntry } from '@/types';
 
 const THINK_MS = 650;
@@ -26,43 +27,11 @@ const WORD_MS = 28;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Range-aware message for a glucose value. */
-function glucoseMessage(v: number): string {
-  if (v < 70) return AGENT_ES.glucose.low(v);
-  if (v < 180) return AGENT_ES.glucose.ok(v);
-  if (v < 250) return AGENT_ES.glucose.high(v);
-  return AGENT_ES.glucose.veryHigh(v);
-}
-
-/** Pick the right warm acknowledgement for a confirmed draft. */
-function ackFor(draft: DraftEntries): string {
-  const e = draft.primary;
-  switch (e.type) {
-    case 'glucose':
-      return glucoseMessage(e.payload.value);
-    case 'meal': {
-      const sec = draft.secondary;
-      if (sec && sec.type === 'glucose') return glucoseMessage(sec.payload.value);
-      return AGENT_ES.confirmations.savedMeal;
-    }
-    case 'sleep':
-      return e.payload.hours < 6
-        ? AGENT_ES.offline.sleepShort(e.payload.hours)
-        : AGENT_ES.confirmations.savedSleep;
-    case 'medication':
-      return AGENT_ES.confirmations.savedMedication;
-    case 'symptom':
-      return evaluateRedFlag(e.payload.description).message;
-    default:
-      return AGENT_ES.confirmations.savedLong;
-  }
-}
-
 export class MockAgentProvider implements AgentProvider {
   readonly id = 'mock';
 
-  /** Drafts awaiting confirmation, keyed by tool-call id. */
-  private pending = new Map<string, { draft: DraftEntries; ack: string }>();
+  /** Acknowledgements awaiting confirmation, keyed by tool-call id. */
+  private pending = new Map<string, string>();
 
   async *sendMessage(input: AgentInput): AsyncIterable<AgentEvent> {
     const intent = parseMessage(input.text);
@@ -86,9 +55,9 @@ export class MockAgentProvider implements AgentProvider {
         }
       }
 
-      const ack = ackFor(draft);
+      const ack = ackForEntries(draft.primary, draft.secondary);
       const callId = uid('call');
-      this.pending.set(callId, { draft, ack });
+      this.pending.set(callId, ack);
 
       const args: RegisterEntryArgs = {
         entry: draft.primary,
@@ -118,7 +87,7 @@ export class MockAgentProvider implements AgentProvider {
   }
 
   async *provideToolResult(result: ToolResult): AsyncIterable<AgentEvent> {
-    const entry = this.pending.get(result.callId);
+    const ack = this.pending.get(result.callId);
     this.pending.delete(result.callId);
 
     if (!result.ok) {
@@ -128,7 +97,7 @@ export class MockAgentProvider implements AgentProvider {
     }
 
     await sleep(280);
-    yield* this.streamText(entry?.ack ?? AGENT_ES.confirmations.saved);
+    yield* this.streamText(ack ?? AGENT_ES.confirmations.savedLong);
     yield { type: 'done' };
   }
 
