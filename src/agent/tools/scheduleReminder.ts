@@ -1,17 +1,13 @@
 /**
- * scheduleReminder — STUB for Phase 2 device notification integration.
+ * scheduleReminder — persist a daily medication reminder time.
  *
- * TODO Phase 2: integrate device notifications (e.g. Web Push API, React Native
- * PushNotificationIOS / Notifications, or a backend scheduled job via Supabase
- * Edge Functions).  For now this returns a confirmation immediately without
- * actually scheduling anything.
+ * In-app delivery: this writes the time into the medication's `schedule[]`, and
+ * the `dueMedicationReminders` generator surfaces it on the next scheduler tick.
+ * (Closed-tab / cross-device delivery would need Web Push — see the spec.)
  */
 
 import { z } from 'zod';
-
-// ---------------------------------------------------------------------------
-// Input schema
-// ---------------------------------------------------------------------------
+import { useAppStore } from '@/store/appStore';
 
 const ScheduleReminderInput = z.object({
   medicationId: z.string().min(1, 'medicationId is required'),
@@ -21,10 +17,6 @@ const ScheduleReminderInput = z.object({
 
 export type ScheduleReminderInput = z.infer<typeof ScheduleReminderInput>;
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 export interface ScheduleReminderResult {
   scheduled: true;
   medicationId: string;
@@ -32,15 +24,20 @@ export interface ScheduleReminderResult {
 }
 
 /**
- * Stub: acknowledge a reminder request without actually scheduling it.
- * Throws ZodError on invalid input.
+ * Add `time` to the target medication's schedule (idempotent — never
+ * duplicates a time, preserves existing entries). Throws ZodError on invalid
+ * input. No-ops the persistence if the medication isn't found, but still
+ * returns a scheduled result (the agent's intent is acknowledged).
  */
 export function scheduleReminder(input: ScheduleReminderInput): ScheduleReminderResult {
   const parsed = ScheduleReminderInput.parse(input);
-  // TODO Phase 2: integrate device notifications
-  return {
-    scheduled: true,
-    medicationId: parsed.medicationId,
-    time: parsed.time,
-  };
+  const state = useAppStore.getState();
+  const med = state.medications.find((m) => m.id === parsed.medicationId);
+  if (med && !med.schedule.includes(parsed.time)) {
+    state.actions.upsertMedication({
+      ...med,
+      schedule: [...med.schedule, parsed.time].sort(),
+    });
+  }
+  return { scheduled: true, medicationId: parsed.medicationId, time: parsed.time };
 }
