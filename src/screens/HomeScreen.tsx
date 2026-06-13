@@ -12,16 +12,16 @@ import { dateKey } from '@/lib/dateUtils';
 import { useAppStore } from '@/store/appStore';
 import { KhumpiAvatar } from '@/components/khumpi/KhumpiAvatar';
 import { Pillbox } from '@/components/pillbox/Pillbox';
-import { CaregiverDashboard } from '@/screens/CaregiverDashboard';
+import { CaregiverPortfolio } from '@/screens/CaregiverPortfolio';
 import { GearIcon, ChatBubbleIcon } from '@/components/ui/icons';
 import { runPatternDetection } from '@/agent/tools';
 import { Ring, Sparkline } from '@/components/report/viz';
 import type { GlucoseLog, SleepLog } from '@/types';
 
-/** Inicio routes to the patient home or the caregiver dashboard by front. */
+/** Inicio routes to the patient home or the caregiver portfolio by front. */
 export function HomeScreen() {
   const mode = useAppStore((s) => s.mode);
-  return mode === 'caregiver' ? <CaregiverDashboard /> : <PatientHome />;
+  return mode === 'caregiver' ? <CaregiverPortfolio /> : <PatientHome />;
 }
 
 /** "20:00" → "8:00 pm". */

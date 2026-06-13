@@ -198,6 +198,7 @@ export const es = {
     noData: 'Aún no hay datos de este familiar. Cuéntale a Khumpi cómo va.',
     alertsTitle: 'Atención',
     alertHigh: (v: number) => `Azúcar alta esta mañana: ${v} mg/dL`,
+    alertForgotPill: (name: string) => `Olvidó tomar ${name} hoy`,
     alertStock: 'Quedan pocas pastillas — conviene reponer',
     allCalm: 'Todo tranquilo por ahora 💙',
     recent: 'Lo último',
@@ -205,6 +206,24 @@ export const es = {
     viewJournal: 'Ver diario',
     viewReport: 'Ver reporte',
     talk: 'Escribir a Khumpi',
+
+    // Portfolio (all-patients overview)
+    portfolioTitle: 'Tus personas',
+    portfolioCount: (n: number) => (n === 1 ? '1 persona a tu cuidado' : `${n} personas a tu cuidado`),
+    portfolioAllCalm: 'Todas tus personas están bien por ahora 💙',
+    relationLabel: (r: 'self' | 'father' | 'mother') =>
+      r === 'self' ? 'Tú' : r === 'father' ? 'Tu papá' : 'Tu mamá',
+    statusCalm: 'Todo tranquilo',
+    statusWarn: 'Necesita atención',
+    statusUrgent: 'Revisar ahora',
+    badgeHigh: 'Azúcar alta',
+    badgeForgotPill: 'Pastilla olvidada',
+    badgeStock: 'Pocas pastillas',
+    badgeRedFlag: 'Síntoma de alerta',
+    needsAttention: (n: number) =>
+      n === 1 ? '1 persona necesita atención' : `${n} personas necesitan atención`,
+    back: 'Volver',
+    openPatient: (name: string) => `Ver a ${name}`,
   },
 
   notifications: {
@@ -292,7 +311,7 @@ export const es = {
     reconnecting: (n: number) =>
       `✓ De vuelta — sincronizando ${n} ${n === 1 ? 'registro' : 'registros'}…`,
     reconnected: '✓ De vuelta — todo sincronizado',
-    reconnectMsg: 'Ya vi lo que me contaste sin señal 💚 Lo dejé todo guardado.',
+    reconnectMsg: 'Ya vi todo lo que me contaste sin señal 💚 Todo guardado.',
     emergencyLine: (name: string, phone: string) =>
       `Si te sientes mal, avisa a ${name}: ${phone}.`,
   },

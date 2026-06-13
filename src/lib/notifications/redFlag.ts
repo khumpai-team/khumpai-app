@@ -1,8 +1,10 @@
 // src/lib/notifications/redFlag.ts
 /**
- * Red-flag alerts: scan today's symptom and glucose logs for the current
- * person; emit an urgent notification for any that the red-flag evaluators
- * classify urgent or emergency.
+ * Red-flag alerts: scan today's symptom and glucose logs for EVERY person the
+ * account follows; emit an urgent notification for any that the red-flag
+ * evaluators classify urgent or emergency. (In the patient front there is only
+ * `self`, so this is unchanged there; in the caregiver front it surfaces a
+ * concerning reading for any patient, not just the one being viewed.)
  */
 import { dateKey } from '@/lib/dateUtils';
 import { es } from '@/data/i18n/es';
@@ -15,7 +17,6 @@ export function pendingRedFlagNotifications(state: AppState, now: Date): AppNoti
   const out: AppNotification[] = [];
 
   for (const log of state.logs) {
-    if (log.personId !== state.currentPersonId) continue;
     if (dateKey(log.timestamp) !== today) continue;
 
     let level: RedFlagLevel = 'ok';

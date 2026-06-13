@@ -1,29 +1,26 @@
 /**
- * CaregiverDashboard — the caregiver front. Monitors ONE patient at a time
- * (currentPersonId): vitals at a glance, gentle alerts, recent activity, and
- * quick ways in. A patient switcher (avatars) changes who you're watching, and
- * you can add another person to care for. Accent is deep-blue (see tokens).
+ * CaregiverDashboard — the per-patient DETAIL view. Reached by tapping a card in
+ * CaregiverPortfolio (which sets currentPersonId). Shows one patient at a time:
+ * status banner, vitals at a glance, recent activity, and quick ways in
+ * (journal / report / chat — all scoped to currentPersonId). A back affordance
+ * returns to the portfolio. Accent is deep-blue (see tokens).
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { es } from '@/data/i18n/es';
-import { uid } from '@/lib/id';
-import { caregiverAlertConditions } from '@/lib/notifications/caregiver';
+import { caregiverPatientStatus, type CaregiverSeverity } from '@/lib/notifications/caregiver';
 import { useAppStore } from '@/store/appStore';
 import { usePillboxStore } from '@/store/usePillboxStore';
 import type { GlucoseLog, LogEntry, MoodLog, SleepLog } from '@/types';
 import {
   GearIcon,
-  PlusIcon,
   ChatBubbleIcon,
   ReportIcon,
   DropIcon,
   AlertIcon,
-  CheckIcon,
+  ChevronLeftIcon,
 } from '@/components/ui/icons';
-
-const PALETTE = ['#1F6699', '#2E7D6B', '#8A5CC0', '#C06A3A'];
 
 function fmtTime(iso: string) {
   return new Intl.DateTimeFormat('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso));
@@ -74,7 +71,13 @@ function recentLabel(l: LogEntry): string {
   }
 }
 
-export function CaregiverDashboard() {
+const SEVERITY_COLOR: Record<CaregiverSeverity, string> = {
+  calm: 'var(--border)',
+  warn: 'var(--amber)',
+  urgent: 'var(--danger)',
+};
+
+export function CaregiverDashboard({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const persons = useAppStore((s) => s.persons);
   const currentPersonId = useAppStore((s) => s.currentPersonId);
@@ -82,9 +85,6 @@ export function CaregiverDashboard() {
   const medications = useAppStore((s) => s.medications);
   const stockMap = usePillboxStore((s) => s.stock);
   const capMap = usePillboxStore((s) => s.capacity);
-
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState('');
 
   const patient = persons.find((p) => p.id === currentPersonId) ?? persons[0];
 
@@ -103,43 +103,41 @@ export function CaregiverDashboard() {
     const recs = meds.flatMap((m) => m.adherenceLog).filter((r) => new Date(`${r.date}T12:00:00`).getTime() >= cutoff);
     const adherence = recs.length ? Math.round((recs.filter((r) => r.taken).length / recs.length) * 100) : null;
 
-    const stock = meds.length ? stockMap[meds[0].id] ?? capMap[meds[0].id] ?? 30 : null;
-
     const lastSleep = pLogs.filter((l): l is SleepLog => l.type === 'sleep').sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
     const lastMood = pLogs.filter((l): l is MoodLog => l.type === 'mood').sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
     const recent = [...pLogs].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 5);
 
-    return { latest, avg, inRange, weekCount: vals.length, adherence, stock, lastSleep, lastMood, recent, hasData: pLogs.length > 0 };
-  }, [patient, logs, medications, stockMap, capMap]);
+    return { latest, avg, inRange, weekCount: vals.length, adherence, lastSleep, lastMood, recent, hasData: pLogs.length > 0 };
+  }, [patient, logs, medications]);
 
-  const medId = medications.find((m) => m.personId === patient?.id)?.id;
-  const { highToday, stockLow } = caregiverAlertConditions(logs, patient?.id ?? '', new Date(), {
-    remaining: data.stock,
-    capacity: (medId ? capMap[medId] : undefined) ?? 30,
-  });
-  const alerts: string[] = [];
-  if (highToday) alerts.push(es.caregiver.alertHigh(highToday));
-  if (stockLow) alerts.push(es.caregiver.alertStock);
-
-  const addPatient = () => {
-    const name = newName.trim();
-    if (!name) return;
-    const id = uid('person');
-    const color = PALETTE[persons.length % PALETTE.length];
-    useAppStore.setState((s) => ({
-      persons: [...s.persons, { id, name, relation: 'mother', color }],
-      currentPersonId: id,
-    }));
-    setNewName('');
-    setAdding(false);
-  };
+  const status = useMemo(
+    () =>
+      caregiverPatientStatus(logs, medications, patient?.id ?? '', new Date(), {
+        stock: stockMap,
+        capacity: capMap,
+        lastCheckinDate: null,
+      }),
+    [logs, medications, patient, stockMap, capMap],
+  );
 
   if (!patient) return null;
+
+  const bannerColor = SEVERITY_COLOR[status.severity];
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-bg-base no-scrollbar">
       {/* header */}
-      <header className="relative border-b border-border bg-bg-surface px-5 pb-3 pt-6">
+      <header className="relative border-b border-border bg-bg-surface px-5 pb-4 pt-6">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={es.caregiver.back}
+            className="touch-target absolute left-2 top-4 grid h-11 w-11 place-items-center rounded-full text-text-secondary transition-colors active:bg-bg-sunken"
+          >
+            <ChevronLeftIcon size={24} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => navigate('/settings')}
@@ -149,58 +147,13 @@ export function CaregiverDashboard() {
           <GearIcon size={23} />
         </button>
 
-        <div className="flex items-center gap-3 pr-12">
+        <div className={`flex items-center gap-3 ${onBack ? 'pl-10' : ''} pr-12`}>
           <Avatar name={patient.name} color={patient.color} size={52} />
           <div className="min-w-0">
-            <p className="eyebrow">{es.caregiver.caringFor('').trim()}</p>
+            <p className="eyebrow">{es.caregiver.relationLabel(patient.relation)}</p>
             <h1 className="font-serif text-2xl font-bold leading-tight text-text-primary">{patient.name}</h1>
           </div>
         </div>
-
-        {/* patient switcher */}
-        {(persons.length > 1 || true) && (
-          <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
-            {persons.map((p) => {
-              const active = p.id === patient.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => useAppStore.setState({ currentPersonId: p.id })}
-                  className="press flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm font-bold"
-                  style={{ borderColor: active ? 'var(--cyan)' : 'var(--border)', opacity: active ? 1 : 0.6 }}
-                >
-                  <Avatar name={p.name} color={p.color} size={26} />
-                  {p.name}
-                </button>
-              );
-            })}
-            {adding ? (
-              <span className="flex items-center gap-1">
-                <input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addPatient()}
-                  placeholder={es.caregiver.addPatientName}
-                  className="w-36 rounded-full border border-border bg-bg-base px-3 py-1.5 text-sm focus-visible:outline-none"
-                />
-                <button type="button" onClick={addPatient} className="btn-primary press grid h-8 w-8 place-items-center rounded-full">
-                  <CheckIcon size={16} />
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAdding(true)}
-                aria-label={es.caregiver.addPatient}
-                className="press grid h-9 w-9 shrink-0 place-items-center rounded-full border border-dashed border-border-strong text-text-secondary"
-              >
-                <PlusIcon size={18} />
-              </button>
-            )}
-          </div>
-        )}
       </header>
 
       <div className="flex flex-col gap-4 px-5 pb-6 pt-4">
@@ -210,22 +163,22 @@ export function CaregiverDashboard() {
           </p>
         ) : (
           <>
-            {/* alerts */}
+            {/* status banner */}
             <section
               className="rounded-lg border p-4 shadow-soft"
               style={{
-                borderColor: alerts.length ? 'var(--amber)' : 'var(--border)',
-                background: alerts.length ? 'var(--amber-tint)' : 'var(--bg-surface)',
+                borderColor: bannerColor,
+                background: status.severity === 'calm' ? 'var(--bg-surface)' : 'var(--amber-tint)',
               }}
             >
-              <p className="eyebrow flex items-center gap-1.5" style={{ color: alerts.length ? 'var(--amber)' : undefined }}>
+              <p className="eyebrow flex items-center gap-1.5" style={{ color: status.severity === 'calm' ? undefined : bannerColor }}>
                 <AlertIcon size={14} /> {es.caregiver.alertsTitle}
               </p>
-              {alerts.length ? (
+              {status.alerts.length ? (
                 <ul className="mt-1.5 flex flex-col gap-1">
-                  {alerts.map((a, i) => (
+                  {status.alerts.map((a, i) => (
                     <li key={i} className="text-[15px] font-semibold text-text-primary">
-                      {a}
+                      {a.text}
                     </li>
                   ))}
                 </ul>
@@ -266,7 +219,7 @@ export function CaregiverDashboard() {
           </>
         )}
 
-        {/* quick links */}
+        {/* quick links — scoped to currentPersonId, so each patient's reports open */}
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"

@@ -484,6 +484,58 @@ const stressLogs: StressLog[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Second caregiver patient — "Rosa" (mother).
+//
+// A smaller, recent history that yields a DIFFERENT live status than Carlos so
+// the caregiver portfolio shows two cards in two states. Rosa has a high
+// fasting reading TODAY (188) and her 08:00 dose today is not marked taken — so
+// she surfaces as "Necesita atención" (azúcar alta + pastilla olvidada) while
+// Carlos stays calm in a typical daytime demo.
+// ---------------------------------------------------------------------------
+
+const ROSA_BASE = {
+  personId: 'rosa',
+  source: 'seed' as const,
+  confirmed: true as const,
+  isOfflineCapture: false as const,
+};
+
+const rosaLogs: LogEntry[] = [
+  {
+    ...ROSA_BASE,
+    id: 'rosa-glu-1',
+    type: 'glucose',
+    timestamp: DAYS_AGO(2, 7, 30),
+    createdAt: DAYS_AGO(2, 7, 31),
+    payload: { value: 124, moment: 'ayunas' },
+  },
+  {
+    ...ROSA_BASE,
+    id: 'rosa-glu-2',
+    type: 'glucose',
+    timestamp: DAYS_AGO(1, 7, 30),
+    createdAt: DAYS_AGO(1, 7, 31),
+    payload: { value: 131, moment: 'ayunas' },
+  },
+  {
+    ...ROSA_BASE,
+    id: 'rosa-glu-3',
+    type: 'glucose',
+    timestamp: DAYS_AGO(0, 7, 30),
+    createdAt: DAYS_AGO(0, 7, 31),
+    payload: { value: 188, moment: 'ayunas' },
+  },
+  {
+    ...ROSA_BASE,
+    id: 'rosa-mood-1',
+    type: 'mood',
+    timestamp: DAYS_AGO(1, 20, 0),
+    createdAt: DAYS_AGO(1, 20, 1),
+    payload: { score: 4 },
+  },
+];
+
+// ---------------------------------------------------------------------------
 // All logs combined
 // ---------------------------------------------------------------------------
 
@@ -493,6 +545,7 @@ export const SEED_LOGS: LogEntry[] = [
   ...mealLogs,
   ...moodLogs,
   ...stressLogs,
+  ...rosaLogs,
 ];
 
 // ---------------------------------------------------------------------------
@@ -524,6 +577,20 @@ const buildAdherenceLog = (): AdherenceRecord[] => {
   return records;
 };
 
+/** Rosa's adherence: mostly taken, but TODAY's 08:00 dose is missed. */
+const buildRosaAdherenceLog = (): AdherenceRecord[] => {
+  const records: AdherenceRecord[] = [];
+  for (let daysAgo = 5; daysAgo >= 0; daysAgo--) {
+    const date = DATE_AGO(daysAgo);
+    for (const time of ['08:00', '20:00']) {
+      if (daysAgo === 0 && time === '20:00') continue; // tonight's dose not yet due
+      const missed = daysAgo === 0 && time === '08:00'; // forgot this morning's dose
+      records.push({ date, scheduledTime: time, taken: !missed });
+    }
+  }
+  return records;
+};
+
 export const SEED_MEDICATIONS: Medication[] = [
   {
     id: 'med-metformina',
@@ -533,6 +600,15 @@ export const SEED_MEDICATIONS: Medication[] = [
     frequency: '2 veces al día',
     schedule: ['08:00', '20:00'],
     adherenceLog: buildAdherenceLog(),
+  },
+  {
+    id: 'med-glibenclamida',
+    personId: 'rosa',
+    name: 'Glibenclamida',
+    dose: '5mg',
+    frequency: '2 veces al día',
+    schedule: ['08:00', '20:00'],
+    adherenceLog: buildRosaAdherenceLog(),
   },
 ];
 
@@ -708,6 +784,12 @@ export const SEED_STATE: AppState = {
       name: 'Carlos',
       relation: 'self',
       color: '#2E7D6B',
+    },
+    {
+      id: 'rosa',
+      name: 'Rosa',
+      relation: 'mother',
+      color: '#8A5CC0',
     },
   ],
   currentPersonId: 'carlos',

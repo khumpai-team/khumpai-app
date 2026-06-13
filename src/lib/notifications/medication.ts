@@ -7,11 +7,31 @@
 import { dateKey } from '@/lib/dateUtils';
 import { es } from '@/data/i18n/es';
 import { makeNotification, WINDOW_MIN } from './shared';
-import type { AppNotification, AppState } from '@/types';
+import type { AdherenceRecord, AppNotification, AppState } from '@/types';
 
 function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
+}
+
+/**
+ * Doses scheduled earlier today whose reminder window has FULLY passed and that
+ * are still not marked taken — i.e. the patient forgot them. Distinct from
+ * `dueMedicationReminders` (which fires DURING the window): a dose is only
+ * "forgotten" once now is past `scheduledTime + WINDOW_MIN`, so the gentle
+ * in-window reminder and the caregiver "forgot" alert never fire at once.
+ */
+export function forgottenDosesToday(med: { schedule: string[]; adherenceLog: AdherenceRecord[] }, now: Date): string[] {
+  const today = dateKey(now.toISOString());
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return med.schedule.filter((time) => {
+    const passed = nowMin >= toMinutes(time) + WINDOW_MIN;
+    if (!passed) return false;
+    const taken = med.adherenceLog.some(
+      (r) => r.date === today && r.scheduledTime === time && r.taken,
+    );
+    return !taken;
+  });
 }
 
 export function dueMedicationReminders(state: AppState, now: Date): AppNotification[] {

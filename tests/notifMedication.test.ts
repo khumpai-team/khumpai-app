@@ -1,6 +1,6 @@
 // tests/notifMedication.test.ts
 import { describe, it, expect } from 'vitest';
-import { dueMedicationReminders } from '@/lib/notifications/medication';
+import { dueMedicationReminders, forgottenDosesToday } from '@/lib/notifications/medication';
 import { SEED_STATE } from '@/data/seed';
 import type { AppState, Medication } from '@/types';
 
@@ -50,5 +50,25 @@ describe('dueMedicationReminders', () => {
     const out = dueMedicationReminders(makeState([med({ schedule: ['08:00', '20:00'] })]), new Date('2026-06-12T20:05:00'));
     expect(out).toHaveLength(1);
     expect(out[0].dedupeKey).toBe('med:med-x:2026-06-12:20:00');
+  });
+});
+
+describe('forgottenDosesToday', () => {
+  it('reports a dose only once its reminder window has fully passed', () => {
+    const m = med({ schedule: ['08:00'], adherenceLog: [] });
+    // 08:50 — still inside the 60-min window, not yet "forgotten"
+    expect(forgottenDosesToday(m, new Date('2026-06-12T08:50:00'))).toEqual([]);
+    // 09:30 — window passed, dose untaken
+    expect(forgottenDosesToday(m, new Date('2026-06-12T09:30:00'))).toEqual(['08:00']);
+  });
+
+  it('does not report a dose that was taken', () => {
+    const m = med({ schedule: ['08:00'], adherenceLog: [{ date: '2026-06-12', scheduledTime: '08:00', taken: true }] });
+    expect(forgottenDosesToday(m, new Date('2026-06-12T09:30:00'))).toEqual([]);
+  });
+
+  it('does not report future doses', () => {
+    const m = med({ schedule: ['08:00', '20:00'], adherenceLog: [] });
+    expect(forgottenDosesToday(m, new Date('2026-06-12T09:30:00'))).toEqual(['08:00']);
   });
 });
