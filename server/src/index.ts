@@ -8,6 +8,7 @@ import { stateRoute } from './http/state.route.js';
 import { logsRoute } from './http/logs.route.js';
 import { entitiesRoute } from './http/entities.route.js';
 import { agentRoute } from './http/agent.route.js';
+import { ragRoute } from './http/rag.route.js';
 
 export function createApp() {
   const app = express();
@@ -24,6 +25,7 @@ export function createApp() {
   app.use(logsRoute);
   app.use(entitiesRoute);
   app.use(agentRoute);
+  app.use(ragRoute);
 
   // Production single-origin: serve the built SPA from dist/ (set SPA_DIST in
   // prod; in dev the Vite server serves the SPA + proxies /api, so this is off).
