@@ -8,18 +8,27 @@ import { useState } from 'react';
 import { es } from '@/data/i18n/es';
 import { useNotificationStore, unreadCount } from '@/store/useNotificationStore';
 
+/** Browser permission state, or 'unsupported' where the Notification API is absent. */
+function currentPermission(): NotificationPermission | 'unsupported' {
+  return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
+}
+
 export function NotificationCenter() {
   const [open, setOpen] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(currentPermission);
   const notifications = useNotificationStore((s) => s.notifications);
   const { markRead, dismiss } = useNotificationStore((s) => s.actions);
 
   const visible = notifications.filter((n) => n.status !== 'dismissed');
   const unread = unreadCount(notifications);
 
+  // Only offer the toggle when the browser can still be asked (permission ===
+  // 'default'); once granted/denied the prompt is a no-op, so we hide it.
+  const canEnableToasts = permission === 'default';
+
   const enableToasts = () => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      void Notification.requestPermission();
-    }
+    if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
+    void Notification.requestPermission().then((result) => setPermission(result));
   };
 
   return (
@@ -42,13 +51,15 @@ export function NotificationCenter() {
         <div className="mt-2 max-h-[60vh] w-72 overflow-y-auto rounded-lg border border-border bg-bg-base p-2 shadow-soft-xl">
           <div className="mb-2 flex items-center justify-between px-1">
             <p className="text-sm font-bold text-text-primary">{es.notifications.bell}</p>
-            <button
-              type="button"
-              onClick={enableToasts}
-              className="text-xs font-semibold text-deep-blue"
-            >
-              {es.notifications.enable}
-            </button>
+            {canEnableToasts && (
+              <button
+                type="button"
+                onClick={enableToasts}
+                className="text-xs font-semibold text-deep-blue"
+              >
+                {es.notifications.enable}
+              </button>
+            )}
           </div>
 
           {visible.length === 0 ? (

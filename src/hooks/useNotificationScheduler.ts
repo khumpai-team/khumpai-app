@@ -52,7 +52,7 @@ export function useNotificationScheduler(): void {
           n.severity !== 'info'
         ) {
           new Notification(n.title, { body: n.body });
-          useNotificationStore.getState().actions.markShown(n.id);
+          actions.markShown(n.id);
         }
       }
     };
