@@ -7,6 +7,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY tsconfig.json tsconfig.node.json vite.config.ts index.html ./
+# Tailwind + PostCSS configs are REQUIRED at build — without them PostCSS emits
+# only base CSS (no utility classes) and the SPA renders unstyled.
+COPY tailwind.config.js postcss.config.js ./
 COPY src ./src
 # Bake the REAL (Azure) provider into the production bundle.
 ENV VITE_AGENT_PROVIDER=foundry
