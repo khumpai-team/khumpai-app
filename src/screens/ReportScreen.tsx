@@ -21,7 +21,7 @@ import { evaluateAchievements } from '@/lib/achievements';
 import { uid } from '@/lib/id';
 import { useAppStore } from '@/store/appStore';
 import { useChatStore } from '@/store/useChatStore';
-import { useVisitMediaStore } from '@/store/useVisitMediaStore';
+import { useVisitMediaStore, type VisitMedia } from '@/store/useVisitMediaStore';
 import { useSpeechToText } from '@/app/useSpeechToText';
 import { readAttachment } from '@/lib/image';
 import type { GlucoseLog, GlucoseMoment } from '@/types';
@@ -484,6 +484,19 @@ function Toast({ text }: { text: string }) {
   );
 }
 
+/** An attachment tile — image thumbnail or a 📄 file chip. */
+function MediaTile({ item }: { item: VisitMedia }) {
+  if (item.kind === 'image') {
+    return <img src={item.url} alt="" className="h-16 w-16 rounded-md border border-border object-cover" />;
+  }
+  return (
+    <div className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded-md border border-border bg-bg-sunken p-1 text-center">
+      <span className="text-xl" aria-hidden>📄</span>
+      <span className="w-full truncate text-[9px] font-semibold text-text-tertiary">{item.name}</span>
+    </div>
+  );
+}
+
 // --- Tab: Lo que me dijo el doctor ----------------------------------------
 
 function VisitsTab() {
@@ -497,7 +510,7 @@ function VisitsTab() {
   const [said, setSaid] = useState('');
   const [indications, setIndications] = useState('');
   const [next, setNext] = useState('');
-  const [pending, setPending] = useState<string[]>([]);
+  const [pending, setPending] = useState<VisitMedia[]>([]);
   const [listening, setListening] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -515,8 +528,8 @@ function VisitsTab() {
   };
 
   const attach = async (file: File) => {
-    const { url, isImage } = await readAttachment(file);
-    if (isImage && url) setPending((p) => [...p, url]);
+    const { url, isImage, name } = await readAttachment(file);
+    setPending((p) => [...p, isImage && url ? { kind: 'image', url } : { kind: 'file', name }]);
   };
 
   const saveVisit = () => {
@@ -581,13 +594,13 @@ function VisitsTab() {
             <div>
               <span className="text-sm font-semibold text-text-secondary">{es.report.visitAttachments}</span>
               <div className="mt-1.5 flex flex-wrap gap-2">
-                {pending.map((u, i) => (
-                  <img key={i} src={u} alt="" className="h-16 w-16 rounded-md border border-border object-cover" />
+                {pending.map((m, i) => (
+                  <MediaTile key={i} item={m} />
                 ))}
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
@@ -650,8 +663,8 @@ function VisitsTab() {
               )}
               {media[v.id]?.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {media[v.id].map((u, i) => (
-                    <img key={i} src={u} alt="" className="h-16 w-16 rounded-md border border-border object-cover" />
+                  {media[v.id].map((m, i) => (
+                    <MediaTile key={i} item={m} />
                   ))}
                 </div>
               )}
