@@ -20,9 +20,10 @@ import {
   type DraftEntries,
 } from '@/agent/tools';
 import { ackForEntries } from '@/agent/ack';
+import { getOfflineResponse } from '@/agent/offlineResponses';
+import { queryRag } from '@/agent/tools/queryRag';
 import { recordSuggestion } from '@/lib/prefs';
 import { readAttachment } from '@/lib/image';
-import { evaluateOfflineRules } from '@/lib/offlineRules';
 import { evaluateAchievements } from '@/lib/achievements';
 import { uid } from '@/lib/id';
 import { es } from '@/data/i18n/es';
@@ -68,6 +69,9 @@ export function useChat() {
   // for cards we build locally (so confirm streams the right reply).
   const pendingPickRef = useRef<{ intent: DataIntent } | null>(null);
   const localAckRef = useRef<Map<string, string>>(new Map());
+  // Card ids built on the OFFLINE path — confirm queues them (zero network)
+  // instead of write-through saving, and skips the achievements celebration.
+  const offlineCardRef = useRef<Set<string>>(new Set());
 
   const drive = useCallback(async (stream: AsyncIterable<AgentEvent>) => {
     const chat = useChatStore.getState();
@@ -404,6 +408,19 @@ export function useChat() {
     [presentLocalCard],
   );
 
+  // Present a ConfirmationCard on the OFFLINE path. Same component as online,
+  // but the card is flagged offline (confirm queues it, no network) and its
+  // ack is the hardcoded warm reply — never the LLM, never medical advice.
+  const presentOfflineCard = useCallback((draft: DraftEntries, ack: string) => {
+    const callId = uid('call');
+    localAckRef.current.set(callId, ack);
+    offlineCardRef.current.add(callId);
+    const args: RegisterEntryArgs = { entry: draft.primary, secondaryEntry: draft.secondary, ack };
+    const chat = useChatStore.getState();
+    chat.setThinking(false);
+    chat.addCard({ id: callId, kind: 'card', args, state: 'pending' });
+  }, []);
+
   const pickPerson = useCallback(
     async (itemId: string, person: { id: string; name: string; color: string }) => {
       const pending = pendingPickRef.current;
@@ -475,28 +492,41 @@ export function useChat() {
 
       const intent = parseMessage(trimmed);
 
-      // Offline: queue the entry for later sync and reply from deterministic
-      // local rules, evaluated as if the just-spoken entries were already logged
-      // (they're queued, not yet in `logs`).
+      // Offline: ZERO network. A data entry still flows through the exact same
+      // ConfirmationCard as online — but built locally from the regex parser,
+      // queued (not saved) on confirm, and acknowledged from the hardcoded warm
+      // response set. Anything else gets a generic warm acknowledgement. The LLM
+      // is never touched and nothing can hang.
       if (offline) {
-        const drafts: LogEntry[] = [];
-        if (isDataIntent(intent)) {
-          const draft = buildDraftEntries(intent, app.currentPersonId);
-          drafts.push(draft.primary);
-          if (draft.secondary) drafts.push(draft.secondary);
-          drafts.forEach((d) => app.actions.enqueueOffline(d));
-        }
         chat.setThinking(true);
-        await sleep(550);
-        const snapshot = { ...app, logs: [...app.logs, ...drafts] };
-        const rule = evaluateOfflineRules(snapshot);
-        await streamSay(rule?.message ?? AGENT_ES.offline.noConnection);
-        if (rule?.showEmergencyContact && app.emergencyContact) {
-          await sleep(200);
-          await streamSay(
-            es.offline.emergencyLine(app.emergencyContact.name, app.emergencyContact.phone),
-          );
+        await sleep(450);
+
+        // Offline education: answer from the bundled digest (no network).
+        if (isEducationQuestion(trimmed)) {
+          const hit = queryRag(trimmed);
+          if (hit) {
+            const id = uid('msg');
+            chat.setThinking(false);
+            chat.addMessage({ id, kind: 'message', role: 'khumpi', text: '', streaming: true });
+            const body = `Sin conexión, pero esto es lo que sé: ${hit.content}`;
+            for (const w of body.split(/(\s+)/)) {
+              chat.appendDelta(id, w);
+              if (w.trim()) await sleep(18);
+            }
+            chat.attachSources(id, [{ source: hit.source }]);
+          } else {
+            await streamSay(getOfflineResponse(intent, app.user.name));
+          }
+          return;
         }
+
+        if (isDataIntent(intent)) {
+          chat.setThinking(false);
+          const draft = buildDraftEntries(intent, app.currentPersonId);
+          presentOfflineCard(draft, getOfflineResponse(intent, app.user.name));
+          return;
+        }
+        await streamSay(getOfflineResponse(intent, app.user.name));
         return;
       }
 
@@ -579,24 +609,32 @@ export function useChat() {
 
       await drive(agent.sendMessage({ text: trimmed, history }));
     },
-    [drive, runSpikeArc, runSafety, registerForPerson, streamSay, askEducation],
+    [drive, runSpikeArc, runSafety, registerForPerson, presentOfflineCard, streamSay, askEducation],
   );
 
   const confirmCard = useCallback(
     async (callId: string, savedEntries: LogEntry[]) => {
       const chat = useChatStore.getState();
       const { actions } = useAppStore.getState();
-      savedEntries.forEach((e) => actions.addLog({ ...e, confirmed: true }));
+      // Offline cards: queue for sync (zero network), keep the amber pending dot,
+      // and acknowledge from the hardcoded set — no save write-through, no celebrate.
+      const isOfflineCard = offlineCardRef.current.has(callId);
+      if (isOfflineCard) {
+        offlineCardRef.current.delete(callId);
+        savedEntries.forEach((e) => actions.enqueueOffline({ ...e, confirmed: true }));
+      } else {
+        savedEntries.forEach((e) => actions.addLog({ ...e, confirmed: true }));
+      }
       chat.setCardState(callId, 'saved');
       chat.setThinking(true);
-      // Locally-built (caregiver) cards stream their stored ack; agent cards resume.
+      // Locally-built (offline/caregiver) cards stream their stored ack; agent cards resume.
       const localText = localAckRef.current.get(callId);
       if (localText) {
         localAckRef.current.delete(callId);
         await sleep(280);
         await streamSay(localText);
         chat.setThinking(false);
-        await celebrate();
+        if (!isOfflineCard) await celebrate();
         return;
       }
       await drive(agent.provideToolResult({ callId, name: 'registerEntry', ok: true, savedEntries }));
@@ -611,6 +649,7 @@ export function useChat() {
       chat.setCardState(callId, 'dismissed');
       if (localAckRef.current.has(callId)) {
         localAckRef.current.delete(callId);
+        offlineCardRef.current.delete(callId);
         chat.setThinking(true);
         await streamSay('Sin problema, lo dejamos así. 🙂');
         chat.setThinking(false);
