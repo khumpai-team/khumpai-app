@@ -5,7 +5,7 @@
  * matching pairs.  All functions are pure (no store access, no side effects).
  */
 
-import type { ChartPoint, GlucoseLog, LogEntry, MealLog, StressLog } from '@/types/index';
+import type { ChartPoint, GlucoseLog, LogEntry } from '@/types/index';
 import { dateKey, priorNightKey, morningOf } from '@/lib/dateUtils';
 
 // ---------------------------------------------------------------------------
@@ -135,46 +135,3 @@ export function detectSleepGlucoseCorrelation(logs: LogEntry[]): CorrelationResu
   };
 }
 
-// ---------------------------------------------------------------------------
-// Lightweight same-day pairing helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Pairs each glucose log with all meal logs on the SAME LOCAL CALENDAR DAY.
- * Useful for the detectPattern tool's meal-glucose same-day analysis.
- *
- * @param logs - All LogEntry records for one person.
- * @returns Array of {glucose, related} where related is every meal that day.
- */
-export function pairMealsSameDay(
-  logs: LogEntry[],
-): Array<{ glucose: GlucoseLog; related: MealLog[] }> {
-  const glucoseLogs = logs.filter((l): l is GlucoseLog => l.type === 'glucose');
-  const mealLogs = logs.filter((l): l is MealLog => l.type === 'meal');
-
-  return glucoseLogs.map((g) => {
-    const gKey = dateKey(g.timestamp);
-    const related = mealLogs.filter((m) => dateKey(m.timestamp) === gKey);
-    return { glucose: g, related };
-  });
-}
-
-/**
- * Pairs each glucose log with all stress logs on the SAME LOCAL CALENDAR DAY.
- * Useful for the detectPattern tool's stress-glucose same-day analysis.
- *
- * @param logs - All LogEntry records for one person.
- * @returns Array of {glucose, related} where related is every stress log that day.
- */
-export function pairStressSameDay(
-  logs: LogEntry[],
-): Array<{ glucose: GlucoseLog; related: StressLog[] }> {
-  const glucoseLogs = logs.filter((l): l is GlucoseLog => l.type === 'glucose');
-  const stressLogs = logs.filter((l): l is StressLog => l.type === 'stress');
-
-  return glucoseLogs.map((g) => {
-    const gKey = dateKey(g.timestamp);
-    const related = stressLogs.filter((s) => dateKey(s.timestamp) === gKey);
-    return { glucose: g, related };
-  });
-}

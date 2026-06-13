@@ -72,9 +72,11 @@ export function getSummary(
   const windowMs = periodMs(period);
   const cutoff = ref.getTime() - windowMs;
 
-  const inWindow = (entry: LogEntry): boolean =>
-    new Date(entry.timestamp).getTime() >= cutoff &&
-    new Date(entry.timestamp).getTime() <= ref.getTime();
+  const refMs = ref.getTime();
+  const inWindow = (entry: LogEntry): boolean => {
+    const t = new Date(entry.timestamp).getTime();
+    return t >= cutoff && t <= refMs;
+  };
 
   // Glucose
   const glucoseLogs = logs.filter(
