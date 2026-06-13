@@ -390,7 +390,17 @@ export function useChat() {
       chat.addMessage({ id: uid('msg'), kind: 'message', role: 'user', text: '', imageUrl: url ?? undefined });
       chat.setThinking(true);
       await sleep(1200); // "reading" the photo
-      // Mock OCR / vision: read a glucometer value from the photo.
+
+      // Mock OCR / vision. Deterministic & demo-controllable: the file name
+      // steers it (e.g. "comida.jpg" → meal), defaulting to a glucose reading.
+      const isMeal = /(comida|food|plato|almuerzo|desayuno|cena|meal)/.test(norm(name));
+      if (isMeal) {
+        await streamSay(es.chat.attachMealReading);
+        presentLocalCard(
+          buildDraftEntries({ kind: 'meal', context: 'casa', description: es.chat.attachMealDesc }, app.currentPersonId),
+        );
+        return;
+      }
       const value = 95 + Math.floor(Math.random() * 110);
       const moment: GlucoseMoment = new Date().getHours() < 11 ? 'ayunas' : 'post-almuerzo';
       await streamSay(es.chat.attachImageReading(value));

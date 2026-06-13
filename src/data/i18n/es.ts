@@ -33,6 +33,8 @@ export const es = {
     analyzing: 'Mirando tu foto…',
     attachImageReading: (v: number) =>
       `Miré tu foto 📷 — parece tu glucómetro marcando ${v} mg/dL. ¿Lo anoto?`,
+    attachMealReading: 'Miré tu foto 🍽️ — parece un plato de comida. ¿Lo anoto como tu comida?',
+    attachMealDesc: 'Plato de comida',
     attachFile: (name: string) => `Recibí “${name}” y lo dejé guardado para tu doctor. 📎`,
     greeting: '¡Hola, Carlos! 👋 ¿Cómo amaneciste hoy?',
     suggestionsTitle: 'Puedes contarme cosas como:',
