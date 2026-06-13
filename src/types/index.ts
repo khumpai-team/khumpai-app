@@ -423,3 +423,5 @@ export interface AppNotification {
   /** Caregiver multi-person attribution. */
   personId?: string;
 }
+
+export type { NotificationContext } from '@/lib/notifications/shared';

@@ -8,8 +8,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { es } from '@/data/i18n/es';
-import { dateKey } from '@/lib/dateUtils';
 import { uid } from '@/lib/id';
+import { caregiverAlertConditions } from '@/lib/notifications/caregiver';
 import { useAppStore } from '@/store/appStore';
 import { usePillboxStore } from '@/store/usePillboxStore';
 import type { GlucoseLog, LogEntry, MoodLog, SleepLog } from '@/types';
@@ -104,23 +104,22 @@ export function CaregiverDashboard() {
     const adherence = recs.length ? Math.round((recs.filter((r) => r.taken).length / recs.length) * 100) : null;
 
     const stock = meds.length ? stockMap[meds[0].id] ?? capMap[meds[0].id] ?? 30 : null;
-    const stockLow = stock != null && meds.length ? stock <= Math.max(6, (capMap[meds[0].id] ?? 30) * 0.2) : false;
 
     const lastSleep = pLogs.filter((l): l is SleepLog => l.type === 'sleep').sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
     const lastMood = pLogs.filter((l): l is MoodLog => l.type === 'mood').sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
     const recent = [...pLogs].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 5);
 
-    return { latest, avg, inRange, weekCount: vals.length, adherence, stock, stockLow, lastSleep, lastMood, recent, hasData: pLogs.length > 0 };
+    return { latest, avg, inRange, weekCount: vals.length, adherence, stock, lastSleep, lastMood, recent, hasData: pLogs.length > 0 };
   }, [patient, logs, medications, stockMap, capMap]);
 
-  const today = dateKey(new Date().toISOString());
-  const highToday =
-    data.latest && data.latest.payload.value >= 180 && dateKey(data.latest.timestamp) === today
-      ? data.latest.payload.value
-      : null;
+  const medId = medications.find((m) => m.personId === patient?.id)?.id;
+  const { highToday, stockLow } = caregiverAlertConditions(logs, patient?.id ?? '', new Date(), {
+    remaining: data.stock,
+    capacity: (medId ? capMap[medId] : undefined) ?? 30,
+  });
   const alerts: string[] = [];
   if (highToday) alerts.push(es.caregiver.alertHigh(highToday));
-  if (data.stockLow) alerts.push(es.caregiver.alertStock);
+  if (stockLow) alerts.push(es.caregiver.alertStock);
 
   const addPatient = () => {
     const name = newName.trim();
