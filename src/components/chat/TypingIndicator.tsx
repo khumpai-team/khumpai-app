@@ -18,7 +18,7 @@ export function TypingIndicator() {
       role="status"
       aria-label={es.chat.statusThinking}
     >
-      <span className="mb-0.5 grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[color:var(--cyan-tint)] ring-1 ring-[color:var(--border)]">
+      <span className="mb-0.5 grid h-12 w-12 shrink-0 place-items-center">
         <KhumpiAvatar state="thinking" size={48} head />
       </span>
       <div className="flex items-center gap-1.5 rounded-[20px] rounded-bl-[7px] border border-border bg-[color:var(--bubble-khumpi)] px-4 py-3.5 shadow-soft">

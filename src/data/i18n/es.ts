@@ -21,6 +21,7 @@ export const es = {
   },
 
   chat: {
+    assistantName: 'Khumpi',
     status: 'En línea',
     statusThinking: 'Escribiendo…',
     statusListening: 'Te escucho…',

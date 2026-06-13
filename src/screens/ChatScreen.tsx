@@ -131,7 +131,7 @@ export function ChatScreen() {
         style={{ background: 'linear-gradient(180deg, var(--cyan-tint), var(--bg-surface) 70%)' }}
       >
         <div className="relative shrink-0">
-          <span className="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-bg-surface shadow-soft ring-1 ring-[color:var(--border)]">
+          <span className="grid h-14 w-14 place-items-center">
             <KhumpiAvatar state={headerState} size={56} head />
           </span>
           {/* online presence dot */}
@@ -141,7 +141,7 @@ export function ChatScreen() {
           />
         </div>
         <div className="flex-1">
-          <p className="font-serif text-[18px] font-bold leading-tight text-text-primary">{es.app.name}</p>
+          <p className="font-serif text-[18px] font-bold leading-tight text-text-primary">{es.chat.assistantName}</p>
           <p
             className="flex w-fit cursor-default select-none items-center gap-1.5 text-[13px] font-semibold text-text-secondary"
             onPointerDown={startPress}

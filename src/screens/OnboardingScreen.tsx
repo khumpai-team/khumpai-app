@@ -213,10 +213,10 @@ export function OnboardingScreen() {
   return (
     <div className="flex h-full flex-col bg-bg-base">
       <header className="flex items-center gap-3 border-b border-border bg-bg-surface px-4 py-2.5">
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-[color:var(--cyan-tint)]">
-          <KhumpiAvatar state="happy" size={34} idle={false} />
+        <span className="grid h-11 w-11 place-items-center">
+          <KhumpiAvatar state="happy" size={44} head />
         </span>
-        <p className="font-serif text-[17px] font-bold text-text-primary">{es.app.name}</p>
+        <p className="font-serif text-[17px] font-bold text-text-primary">{es.chat.assistantName}</p>
       </header>
 
       <div ref={scrollRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
